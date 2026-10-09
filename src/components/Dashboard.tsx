@@ -76,18 +76,6 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
                         : 'bg-[#003847]/70 border-[#00576b]/70 opacity-80 cursor-not-allowed'
                     }`}
                   >
-                    {/* Mission Tag on Top-Left */}
-                    <div className="absolute top-2 left-2 z-20">
-                      <span
-                        className={`text-[9px] md:text-[10px] font-black px-2 py-0.5 rounded-full shadow-md uppercase tracking-wider ${
-                          isAvailable
-                            ? 'bg-[#8ac926] text-slate-950 border border-white/80'
-                            : 'bg-slate-700 text-slate-300'
-                        }`}
-                      >
-                        {game.ribbon}
-                      </span>
-                    </div>
 
                     {/* YELLOW CORNER TRIANGLE "SKILL" on Top-Right */}
                     <button
