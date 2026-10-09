@@ -228,12 +228,12 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
     }
   };
 
-  // Resume after break (+8 bonus seconds grace time)
+  // Resume after break (+5 bonus seconds grace time)
   const handleResumeFromBreak = () => {
     soundEngine.playTap();
     setIsBreakActive(false);
     setPromptActive(false);
-    setSecondsRemaining(prev => Math.max(prev + 8, 10));
+    setSecondsRemaining(prev => Math.min(totalRoundSeconds, Math.max(prev + 5, 5)));
     resetInactivityTimer();
   };
 
@@ -462,7 +462,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
                 className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-amber-500/25 transition-all border-2 border-white/60"
               >
                 <Coffee className="w-5 h-5" />
-                <span>Take a Calm Break (+Bonus Time)</span>
+                <span>Take a Calm Break (+5s Bonus Time)</span>
               </button>
 
               <button
@@ -494,7 +494,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
               Time to relax!
             </h3>
             <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
-              Timer is paused! You'll get +8s bonus extra time when you resume. Breathe with the bubble:
+              Timer is paused! You'll get +5s bonus extra time when you resume. Breathe with the bubble:
             </p>
 
             {/* Breathing Bubble */}
@@ -517,7 +517,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
               className="w-full py-4 bg-gradient-to-r from-[#8ac926] to-[#55a630] hover:from-[#9ef01a] hover:to-[#70e000] active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 transition-all border-2 border-white/60"
             >
               <Play className="w-5 h-5 fill-slate-950" />
-              <span>I am ready! (+8s Bonus Time)</span>
+              <span>I am ready! (+5s Bonus Time)</span>
             </button>
           </div>
         </div>
