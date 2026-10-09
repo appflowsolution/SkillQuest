@@ -15,4 +15,10 @@ export interface GameMetadata {
   ribbon: string;
   ribbonColor: string;
   isAvailable: boolean;
+  
+  // Clinical Rationale (visible when card is flipped)
+  skillName: string;
+  skillCode: string;
+  skillDescription: string;
+  gameAlignment: string;
 }
