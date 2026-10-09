@@ -67,3 +67,14 @@
 .animate-breathe {
   animation: breathe-expand 6s infinite ease-in-out;
 }
+
+@keyframes twinkle-gentle {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}

@@ -3,6 +3,7 @@ import { GAMES_CATALOG } from '../data/games';
 import { GameId } from '../types';
 import { soundEngine } from '../utils/audio';
 import { GameCardIllustration } from './GameCardIllustration';
+import { CosmicBackground } from './CosmicBackground';
 import { 
   Gamepad2, 
   Sparkles, 
@@ -29,9 +30,12 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#003847] via-[#002f3c] to-[#00232d] p-4 md:p-8 select-none flex flex-col justify-between">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#003847] via-[#002f3c] to-[#00232d] p-4 md:p-8 select-none flex flex-col justify-between relative">
+      {/* Living Cosmic Starfield Background with Twinkling Mint Dots & Clouds */}
+      <CosmicBackground />
+
       {/* Dynamic Mission Header */}
-      <div className="max-w-5xl mx-auto text-center mb-6 pt-1">
+      <div className="max-w-5xl mx-auto text-center mb-6 pt-1 relative z-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#004e63]/90 border border-[#00c9a7]/40 text-[#00f2c9] text-xs font-black uppercase tracking-widest mb-2 shadow-inner">
           <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
           <span>SUPERPOWER TRAINING ARCADE</span>
@@ -46,7 +50,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
       </div>
 
       {/* 6 Adventure Game Tiles with Compact, Snug 3D Flip Cards */}
-      <div className="max-w-5xl mx-auto w-full mb-4">
+      <div className="max-w-5xl mx-auto w-full mb-4 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {GAMES_CATALOG.map((game) => {
             const isAvailable = game.isAvailable;
@@ -175,7 +179,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
       </div>
 
       {/* Clean Footer note */}
-      <div className="text-center pb-1">
+      <div className="text-center pb-1 relative z-10">
         <p className="text-[10.5px] text-[#558e99] font-bold">
           SkillQuest Arcade • Tap any quest to play or tap SKILL to inspect clinical alignment
         </p>

@@ -14,6 +14,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { CosmicItemIcon, CosmicItemType } from './CosmicItemIcon';
+import { CosmicBackground } from '../CosmicBackground';
 
 interface GemItem {
   id: number;
@@ -358,13 +359,8 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
 
       {/* MAIN PLAY ARENA */}
       <div className="flex-1 relative bg-gradient-to-b from-[#003847] via-[#002f3c] to-[#00232d] overflow-hidden">
-        {/* Floating Stars Background */}
-        <div className="absolute inset-0 opacity-30 pointer-events-none">
-          <div className="absolute top-1/4 left-1/5 w-2.5 h-2.5 bg-yellow-300 rounded-full animate-ping"></div>
-          <div className="absolute top-3/4 left-2/3 w-3 h-3 bg-[#00f2c9] rounded-full animate-pulse"></div>
-          <div className="absolute top-1/3 left-3/4 w-2 h-2 bg-pink-400 rounded-full"></div>
-          <div className="absolute top-2/3 left-1/3 w-3 h-3 bg-cyan-300 rounded-full"></div>
-        </div>
+        {/* Living Cosmic Starfield Background with Twinkling Mint Dots & Clouds */}
+        <CosmicBackground />
 
         {/* Floating cosmic collectibles in the arena (crystals, planets, rockets, stars, moons) */}
         {!isBreakActive && !isTimeExpired && gems.map((gem) => {
