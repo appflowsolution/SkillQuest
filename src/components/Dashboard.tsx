@@ -6,7 +6,6 @@ import { GameCardIllustration } from './GameCardIllustration';
 import { 
   Gamepad2, 
   Sparkles, 
-  Play, 
   RotateCcw, 
   Brain, 
   Target, 
@@ -41,21 +40,9 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
         <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight uppercase drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] mb-2">
           CHOOSE YOUR QUEST!
         </h1>
-        <p className="text-[#a5d8d8] text-xs md:text-sm font-bold tracking-wide max-w-xl mx-auto mb-3">
+        <p className="text-[#a5d8d8] text-xs md:text-sm font-bold tracking-wide max-w-xl mx-auto">
           Tap any game to play, or touch the yellow <span className="text-[#ffb703] font-black underline decoration-2">SKILL</span> corner to view the superpower!
         </p>
-
-        {/* Yellow Start Button */}
-        <button
-          onClick={() => {
-            soundEngine.playTap();
-            onSelectGame('break-request');
-          }}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-b from-[#ffc300] to-[#ffaa00] hover:from-[#ffd000] hover:to-[#ffb700] active:scale-95 text-slate-950 font-black text-xs md:text-sm rounded-full shadow-lg shadow-amber-500/30 border-2 border-white/70 transition-transform"
-        >
-          <Play className="w-3.5 h-3.5 fill-slate-950" />
-          <span>Launch Mission 1: Cosmic Break Quest</span>
-        </button>
       </div>
 
       {/* 6 Adventure Game Tiles with Compact, Snug 3D Flip Cards */}
