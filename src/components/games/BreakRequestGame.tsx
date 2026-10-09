@@ -6,9 +6,11 @@ import {
   Sparkles, 
   Play, 
   Clock, 
-  Zap,
-  ArrowLeft,
-  Star
+  Zap, 
+  ArrowLeft, 
+  Star, 
+  RotateCcw,
+  Timer
 } from 'lucide-react';
 
 interface GemItem {
@@ -19,6 +21,7 @@ interface GemItem {
   iconBg: string;
   collected: boolean;
   shape: 'diamond' | 'circle' | 'star';
+  floatDuration: number;
 }
 
 interface BreakRequestGameProps {
@@ -33,16 +36,29 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
   const [gems, setGems] = useState<GemItem[]>([]);
   const [isBreakActive, setIsBreakActive] = useState(false);
   const [promptActive, setPromptActive] = useState(false);
-  
+  const [isTimeExpired, setIsTimeExpired] = useState(false);
+
+  // Round Timer (Formula: decreases smoothly as rounds increase)
+  // Round 1: 18s, Round 2: 17s, Round 3: 16s, down to min 10s
+  const calculateRoundTime = (r: number) => Math.max(10, 19 - Math.min(r, 9));
+  const [totalRoundSeconds, setTotalRoundSeconds] = useState(18);
+  const [secondsRemaining, setSecondsRemaining] = useState(18);
+
   // Break countdown timer
   const [breakSecondsLeft, setBreakSecondsLeft] = useState(30);
 
-  // Inactivity tracking for automatic friendly hint
+  // Inactivity tracking
   const inactivityTimerRef = useRef<number | null>(null);
 
-  // Generate gems per round
+  // Generate gems with progressive count and speed
   const generateGems = (currentRound: number) => {
-    const count = Math.min(3 + currentRound, 6);
+    const roundTime = calculateRoundTime(currentRound);
+    setTotalRoundSeconds(roundTime);
+    setSecondsRemaining(roundTime);
+    setIsTimeExpired(false);
+
+    // Number of gems scales with round (3 at round 1 up to 8 at round 6+)
+    const count = Math.min(3 + currentRound, 8);
     const colors = [
       { color: 'from-[#00f2c9] to-[#00a890]', iconBg: 'bg-[#00d2b4]', shape: 'diamond' as const },
       { color: 'from-[#ffb703] to-[#fb8500]', iconBg: 'bg-amber-400', shape: 'circle' as const },
@@ -50,6 +66,8 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
       { color: 'from-[#8ac926] to-[#55a630]', iconBg: 'bg-emerald-400', shape: 'diamond' as const },
       { color: 'from-[#7209b7] to-[#560bad]', iconBg: 'bg-purple-500', shape: 'circle' as const },
       { color: 'from-[#4cc9f0] to-[#4361ee]', iconBg: 'bg-cyan-400', shape: 'star' as const },
+      { color: 'from-[#f72585] to-[#b5179e]', iconBg: 'bg-rose-500', shape: 'diamond' as const },
+      { color: 'from-[#fee440] to-[#f77f00]', iconBg: 'bg-yellow-400', shape: 'circle' as const },
     ];
 
     const newGems: GemItem[] = [];
@@ -63,20 +81,23 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
 
       while (!valid && attempts < 50) {
         attempts++;
-        x = Math.floor(Math.random() * 65) + 18; // 18% to 83% width
-        y = Math.floor(Math.random() * 55) + 15; // 15% to 70% height
+        x = Math.floor(Math.random() * 64) + 18; // 18% to 82% width
+        y = Math.floor(Math.random() * 55) + 16; // 16% to 71% height
 
-        // Avoid bottom-left area where the Pause/Break Button sits
-        if (x < 38 && y > 60) continue;
+        // Keep clear from the bottom-left Break button area
+        if (x < 38 && y > 58) continue;
 
         const collision = usedPositions.some(
-          pos => Math.abs(pos.x - x) < 16 && Math.abs(pos.y - y) < 18
+          pos => Math.abs(pos.x - x) < 14 && Math.abs(pos.y - y) < 16
         );
         if (!collision) valid = true;
       }
 
       usedPositions.push({ x, y });
       const palette = colors[i % colors.length];
+      // Faster float animations as rounds progress (demanding higher focus)
+      const floatDuration = Math.max(2, 4.5 - currentRound * 0.25);
+
       newGems.push({
         id: i + 1,
         x,
@@ -85,6 +106,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
         iconBg: palette.iconBg,
         collected: false,
         shape: palette.shape,
+        floatDuration,
       });
     }
 
@@ -100,7 +122,32 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
     };
   }, []);
 
-  // Break countdown
+  // ROUND COUNTDOWN TIMER
+  useEffect(() => {
+    let interval: number | null = null;
+    if (!isBreakActive && !isTimeExpired && secondsRemaining > 0) {
+      interval = window.setInterval(() => {
+        setSecondsRemaining(prev => {
+          if (prev <= 1) {
+            // Time expired
+            setIsTimeExpired(true);
+            soundEngine.playPromptChime();
+            return 0;
+          }
+          // Flash prompt button when time is critically low (under 5s)
+          if (prev <= 5 && !promptActive) {
+            setPromptActive(true);
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) window.clearInterval(interval);
+    };
+  }, [isBreakActive, isTimeExpired, secondsRemaining, promptActive]);
+
+  // Break countdown timer
   useEffect(() => {
     let interval: number | null = null;
     if (isBreakActive && breakSecondsLeft > 0) {
@@ -116,14 +163,13 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
   // Inactivity timeout
   const resetInactivityTimer = () => {
     if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
-    setPromptActive(false);
 
     inactivityTimerRef.current = window.setTimeout(() => {
-      if (!isBreakActive) {
+      if (!isBreakActive && !isTimeExpired) {
         setPromptActive(true);
         soundEngine.playPromptChime();
       }
-    }, 14000);
+    }, 10000);
   };
 
   // Collect gem on tap
@@ -149,17 +195,19 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
       }
 
       setTimeout(() => {
-        setRound(prev => prev + 1);
-        generateGems(round + 1);
+        const nextRound = round + 1;
+        setRound(nextRound);
+        generateGems(nextRound);
       }, 900);
     }
   };
 
-  // Player requests break
+  // Player requests break (pauses round timer immediately!)
   const handleRequestBreak = () => {
     soundEngine.playBreakBell();
     setIsBreakActive(true);
     setBreakSecondsLeft(30);
+    setIsTimeExpired(false);
 
     try {
       confetti({
@@ -173,19 +221,31 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
     }
   };
 
-  // Resume after break
+  // Resume after break (grants +8 bonus seconds as a rescue reward!)
   const handleResumeFromBreak = () => {
     soundEngine.playTap();
     setIsBreakActive(false);
     setPromptActive(false);
+    // Rescue bonus: grant +8 extra seconds to complete the round calmly!
+    setSecondsRemaining(prev => Math.max(prev + 8, 10));
     resetInactivityTimer();
   };
 
+  // Retry round if time ran out
+  const handleRetryRound = () => {
+    soundEngine.playTap();
+    generateGems(round);
+  };
+
+  // Percentage for timer bar
+  const timePercentage = Math.max(0, Math.min(100, (secondsRemaining / totalRoundSeconds) * 100));
+  const isTimeCritical = secondsRemaining <= 5;
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#002f3c] overflow-hidden relative select-none">
-      {/* Top Game Bar: Playful Arcade Style */}
+      {/* Top Game Bar: Level, Stars, and Timer */}
       <div className="bg-[#003d4c] border-b-2 border-[#00576b] px-4 md:px-8 py-3 flex items-center justify-between shrink-0 z-30 shadow-md">
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="flex items-center gap-3 md:gap-5">
           <button
             onClick={() => {
               soundEngine.playTap();
@@ -194,25 +254,50 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#002833] hover:bg-[#001f28] active:scale-95 text-[#00f2c9] rounded-full font-black text-xs transition-all border border-[#00c9a7]/30"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Games</span>
+            <span>Missions</span>
           </button>
 
-          <div className="flex items-center gap-2">
+          {/* Level Badge */}
+          <div className="flex items-center gap-1.5">
             <span className="text-xs font-black text-[#84cece] uppercase tracking-wider">Level:</span>
             <span className="text-sm font-black text-slate-900 px-3 py-0.5 bg-[#ffb703] rounded-full shadow-sm">
               Round {round}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Stars */}
+          <div className="flex items-center gap-1.5">
             <Star className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-            <span className="text-xs font-black text-[#84cece] uppercase tracking-wider">Stars:</span>
             <span className="text-lg font-black text-white">{score}</span>
           </div>
         </div>
 
-        {/* Model prompt button for helper / therapist (discreet) */}
-        {!isBreakActive && (
+        {/* Center/Right: Live Round Countdown Timer Bar */}
+        <div className="flex items-center gap-3 flex-1 max-w-xs mx-4">
+          <div className="flex items-center gap-1.5 text-xs font-black shrink-0 text-white">
+            <Timer className={`w-4 h-4 ${isTimeCritical ? 'text-rose-400 animate-spin' : 'text-[#00f2c9]'}`} />
+            <span className={`w-7 text-right ${isTimeCritical ? 'text-rose-400 font-extrabold text-sm' : 'text-white'}`}>
+              {secondsRemaining}s
+            </span>
+          </div>
+
+          {/* Progress Bar Container */}
+          <div className="flex-1 h-3.5 bg-[#00232d] rounded-full border border-white/20 overflow-hidden shadow-inner p-0.5">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                isTimeCritical
+                  ? 'bg-gradient-to-r from-rose-500 to-pink-500 animate-pulse'
+                  : timePercentage < 50
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-400'
+                  : 'bg-gradient-to-r from-emerald-400 to-[#00f2c9]'
+              }`}
+              style={{ width: `${timePercentage}%` }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Helper Hint Trigger */}
+        {!isBreakActive && !isTimeExpired && (
           <button
             onClick={() => {
               setPromptActive(true);
@@ -226,14 +311,14 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
             title="Helper hint"
           >
             <Zap className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="hidden sm:inline">{promptActive ? 'Hint Active' : 'Hint'}</span>
+            <span className="hidden sm:inline">{promptActive ? 'Hint On' : 'Hint'}</span>
           </button>
         )}
       </div>
 
       {/* MAIN PLAY ARENA */}
       <div className="flex-1 relative bg-gradient-to-b from-[#003847] via-[#002f3c] to-[#00232d] overflow-hidden">
-        {/* Playful Floating Stars Background */}
+        {/* Floating Stars Background */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute top-1/4 left-1/5 w-2.5 h-2.5 bg-yellow-300 rounded-full animate-ping"></div>
           <div className="absolute top-3/4 left-2/3 w-3 h-3 bg-[#00f2c9] rounded-full animate-pulse"></div>
@@ -241,8 +326,8 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
           <div className="absolute top-2/3 left-1/3 w-3 h-3 bg-cyan-300 rounded-full"></div>
         </div>
 
-        {/* Floating gems in the arena */}
-        {!isBreakActive && gems.map((gem) => {
+        {/* Floating gems in the arena (scales in number and float speed) */}
+        {!isBreakActive && !isTimeExpired && gems.map((gem) => {
           if (gem.collected) return null;
 
           return (
@@ -252,6 +337,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
               style={{
                 left: `${gem.x}%`,
                 top: `${gem.y}%`,
+                animationDuration: `${gem.floatDuration}s`,
               }}
               className="absolute -translate-x-1/2 -translate-y-1/2 w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-[#004d60]/80 border-3 border-[#00f2c9] shadow-xl shadow-cyan-500/25 flex items-center justify-center transition-transform active:scale-90 hover:scale-105 z-10 animate-float-calm"
             >
@@ -262,40 +348,44 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
           );
         })}
 
-        {/* Top game hint pill */}
-        {!isBreakActive && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-[#004e63]/90 backdrop-blur border border-[#00c9a7]/40 px-5 py-2 rounded-full pointer-events-none text-white text-xs md:text-sm font-black flex items-center gap-2 shadow-lg">
+        {/* Top instruction banner */}
+        {!isBreakActive && !isTimeExpired && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-[#004e63]/90 backdrop-blur border border-[#00c9a7]/40 px-5 py-1.5 rounded-full pointer-events-none text-white text-xs md:text-sm font-black flex items-center gap-2 shadow-lg">
             <Sparkles className="w-4 h-4 text-yellow-300" />
-            <span>Tap the cosmic crystals to collect star points!</span>
+            <span>
+              {isTimeCritical 
+                ? 'Time running low! Collect fast or press Break to pause!' 
+                : `Round ${round}: Catch all ${gems.length} crystals!`}
+            </span>
           </div>
         )}
 
-        {/* THE REAL GAME BREAK BUTTON (POWER-UP SHIELD STYLE) */}
+        {/* THE CRITICAL BREAK BUTTON (PAUSES TIMER IMMEDIATELY!) */}
         {!isBreakActive && (
           <div className="absolute bottom-6 left-6 z-20">
             <button
               onClick={handleRequestBreak}
               className={`min-w-[260px] md:min-w-[300px] h-20 md:h-24 px-6 rounded-3xl flex items-center justify-center gap-4 transition-all duration-200 shadow-2xl active:scale-95 ${
-                promptActive
+                promptActive || isTimeCritical
                   ? 'bg-gradient-to-r from-[#ffb703] via-[#fb8500] to-[#ffb703] text-slate-950 ring-4 ring-yellow-300 ring-offset-4 ring-offset-[#002f3c] scale-105 animate-pulse-subtle shadow-amber-500/50'
                   : 'bg-gradient-to-r from-[#ff8800] to-[#e85d04] hover:from-[#ff9e00] hover:to-[#f48c06] text-white border-3 border-white/80 shadow-orange-950/60'
               }`}
             >
               <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                promptActive ? 'bg-slate-950 text-yellow-400' : 'bg-white/25 text-white'
+                promptActive || isTimeCritical ? 'bg-slate-950 text-yellow-400' : 'bg-white/25 text-white'
               }`}>
                 <Coffee className="w-7 h-7 md:w-8 md:h-8" />
               </div>
               <div className="text-left">
                 <div className={`text-base md:text-lg font-black tracking-tight ${
-                  promptActive ? 'text-slate-950' : 'text-white'
+                  promptActive || isTimeCritical ? 'text-slate-950' : 'text-white'
                 }`}>
                   TAKE A BREAK
                 </div>
                 <div className={`text-xs font-black uppercase tracking-wider ${
-                  promptActive ? 'text-slate-900' : 'text-orange-100'
+                  promptActive || isTimeCritical ? 'text-slate-900' : 'text-orange-100'
                 }`}>
-                  Pause & Relax Anytime
+                  {isTimeCritical ? 'Pause Timer & Breathe!' : 'Pause Anytime'}
                 </div>
               </div>
             </button>
@@ -303,10 +393,47 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
         )}
       </div>
 
-      {/* CALM OVERLAY SCREEN (COZY ARCADE PAUSE) */}
+      {/* TIME EXPIRED OVERLAY (NON-PUNITIVE, OFFERS BREAK OR RETRY) */}
+      {isTimeExpired && !isBreakActive && (
+        <div className="absolute inset-0 bg-[#001f28]/95 backdrop-blur-md z-45 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+          <div className="max-w-md w-full bg-[#003847] border-3 border-amber-400 rounded-3xl p-8 shadow-2xl flex flex-col items-center">
+            <div className="w-20 h-20 rounded-3xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 mb-4 shadow-lg">
+              <Clock className="w-10 h-10 animate-pulse" />
+            </div>
+
+            <h3 className="text-2xl md:text-3xl font-black text-white mb-2">
+              Time Ran Out!
+            </h3>
+            <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
+              That round was fast! Want to take a quick rest, or try this round again?
+            </p>
+
+            <div className="w-full flex flex-col gap-3">
+              {/* Option 1: Take a Break */}
+              <button
+                onClick={handleRequestBreak}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-amber-500/25 transition-all border-2 border-white/60"
+              >
+                <Coffee className="w-5 h-5" />
+                <span>Take a Calm Break (+Extra Time)</span>
+              </button>
+
+              {/* Option 2: Retry Round */}
+              <button
+                onClick={handleRetryRound}
+                className="w-full py-3.5 bg-[#002732] hover:bg-[#001f28] active:scale-98 text-[#00f2c9] rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border border-[#00c9a7]/40"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Try Round {round} Again</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CALM OVERLAY SCREEN (BREAK ACTIVE) */}
       {isBreakActive && (
-        <div className="absolute inset-0 bg-[#001f28]/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
-          {/* Pause Card */}
+        <div className="absolute inset-0 bg-[#001f28]/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
           <div className="max-w-md w-full bg-[#003847] border-3 border-[#00d2b4] rounded-3xl p-8 shadow-2xl flex flex-col items-center">
             <div className="w-20 h-20 rounded-3xl bg-[#00576b] border-2 border-[#00f2c9] flex items-center justify-center text-yellow-300 mb-4 shadow-lg">
               <Coffee className="w-10 h-10" />
@@ -321,7 +448,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
               Time to relax!
             </h3>
             <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
-              Taking a break whenever you need it is a real superpower. Breathe with the bubble below:
+              Timer is paused! You'll get bonus extra time when you resume. Breathe with the bubble:
             </p>
 
             {/* Breathing Bubble */}
@@ -344,7 +471,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
               className="w-full py-4 bg-gradient-to-r from-[#8ac926] to-[#55a630] hover:from-[#9ef01a] hover:to-[#70e000] active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 transition-all border-2 border-white/60"
             >
               <Play className="w-5 h-5 fill-slate-950" />
-              <span>I am ready to play!</span>
+              <span>I am ready! (+8s Bonus Time)</span>
             </button>
           </div>
         </div>
