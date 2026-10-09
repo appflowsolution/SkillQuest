@@ -35,7 +35,7 @@ export function App() {
   const activeGame = GAMES_CATALOG.find(g => g.id === activeGameId);
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="w-full h-full flex flex-col bg-[#002f3c] text-white overflow-hidden font-sans">
       <Header
         currentView={currentView}
         activeGameTitle={activeGame?.title}
