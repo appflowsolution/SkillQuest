@@ -66,7 +66,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
             const isFlipped = !!flippedCards[game.id];
 
             return (
-              <div key={game.id} className="perspective-1000 w-full h-[320px] md:h-[340px]">
+              <div key={game.id} className="perspective-1000 w-full h-[330px] md:h-[350px]">
                 {/* 3D Flipping Card Container */}
                 <div
                   className={`w-full h-full relative transition-transform duration-500 preserve-3d ${
@@ -82,6 +82,8 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
                       }
                     }}
                     className={`w-full h-full absolute inset-0 backface-hidden rounded-2xl md:rounded-3xl overflow-hidden border-2 transition-all flex flex-col justify-between ${
+                      isFlipped ? 'opacity-0 pointer-events-none z-0' : 'opacity-100 z-10'
+                    } ${
                       isAvailable
                         ? 'bg-[#004758] hover:bg-[#005a70] border-[#00d2b4] hover:border-[#48ffdf] cursor-pointer shadow-xl hover:shadow-cyan-500/20'
                         : 'bg-[#003847]/70 border-[#00576b]/70 opacity-80 cursor-not-allowed'
@@ -143,15 +145,22 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
 
                   {/* BACK FACE: Clinical Skill Explanation */}
                   <div
-                    className="w-full h-full absolute inset-0 backface-hidden rotate-y-180 rounded-2xl md:rounded-3xl overflow-hidden border-2 border-[#ffb703] bg-[#002833] p-4 text-white flex flex-col justify-between shadow-2xl select-text"
+                    className={`w-full h-full absolute inset-0 backface-hidden rotate-y-180 rounded-2xl md:rounded-3xl overflow-hidden border-2 border-[#ffb703] bg-[#002530] p-4 text-white flex flex-col justify-between shadow-2xl select-text ${
+                      isFlipped ? 'opacity-100 z-20 pointer-events-auto' : 'opacity-0 pointer-events-none z-0'
+                    }`}
                   >
-                    {/* Header with Skill Code & Flip-Back Button */}
-                    <div className="flex items-center justify-between border-b border-[#004f61] pb-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <Brain className="w-4 h-4 text-[#ffb703]" />
-                        <span className="text-xs font-black uppercase text-[#ffb703] tracking-wide">
-                          {game.skillCode}: {game.skillName}
-                        </span>
+                    {/* Header with Skill Code, Wrapped Title & Flip-Back Button */}
+                    <div className="flex items-start justify-between border-b border-[#004f61] pb-2.5 gap-2">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <Brain className="w-4 h-4 text-[#ffb703] shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[10px] font-black uppercase text-[#00f2c9] tracking-wider block">
+                            {game.skillCode}
+                          </span>
+                          <h4 className="text-xs md:text-sm font-black uppercase text-[#ffb703] leading-tight break-words">
+                            {game.skillName}
+                          </h4>
+                        </div>
                       </div>
 
                       <button
@@ -160,7 +169,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
                           soundEngine.playTap();
                           toggleFlip(game.id);
                         }}
-                        className="w-7 h-7 rounded-full bg-[#003d4c] hover:bg-[#005166] text-white flex items-center justify-center active:scale-95 transition-all shadow"
+                        className="w-7 h-7 rounded-full bg-[#003d4c] hover:bg-[#005166] text-white flex items-center justify-center shrink-0 active:scale-95 transition-all shadow"
                         title="Flip back to front"
                       >
                         <RotateCcw className="w-3.5 h-3.5 text-[#00f2c9]" />
