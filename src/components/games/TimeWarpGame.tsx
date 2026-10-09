@@ -33,6 +33,15 @@ interface TimeWarpGameProps {
   onExit: () => void;
 }
 
+const TARGET_RELICS = 5;
+
+interface FloatingFeedback {
+  id: number;
+  text: string;
+  lane: number;
+  type: 'collect' | 'glitch';
+}
+
 const ERAS = [
   { name: 'Pharaoh Sands', bgGradient: 'from-[#002f3c] via-[#004758] to-[#001f28]', horizonColor: '#f59e0b' },
   { name: 'Clockwork Realm', bgGradient: 'from-[#002833] via-[#003847] to-[#001d24]', horizonColor: '#00f2c9' },
@@ -44,9 +53,26 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
   // Game & Era progression
   const [eraIndex, setEraIndex] = useState(0);
   const [score, setScore] = useState(0);
+  const [relicsCount, setRelicsCount] = useState(0);
   const [playerLane, setPlayerLane] = useState<number>(1); // 0 = Left, 1 = Center, 2 = Right
   const [distanceRemaining, setDistanceRemaining] = useState<number>(100); // meters to time portal
   const [speedBoost, setSpeedBoost] = useState(false);
+  const [feedbackList, setFeedbackList] = useState<FloatingFeedback[]>([]);
+
+  // Ref to always have latest playerLane in 60fps RAF loop without closure lag
+  const playerLaneRef = useRef(playerLane);
+  useEffect(() => {
+    playerLaneRef.current = playerLane;
+  }, [playerLane]);
+
+  // Floating text feedback trigger (+25 ⭐ or ⚡ GLITCH!)
+  const triggerFeedback = useCallback((text: string, lane: number, type: 'collect' | 'glitch') => {
+    const id = Date.now() + Math.random();
+    setFeedbackList(prev => [...prev.slice(-4), { id, text, lane, type }]);
+    setTimeout(() => {
+      setFeedbackList(prev => prev.filter(f => f.id !== id));
+    }, 900);
+  }, []);
 
   // Clinical Skill 9 (Requesting More Time / Transition Tolerance)
   const initialTime = 22; // Base seconds before portal closes
@@ -89,7 +115,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [moveLeft, moveRight, isEraWon, isTransitionComplete]);
 
-  // Main Runner Animation Loop (60 FPS)
+  // Main Runner Animation Loop (60 FPS) with integrated continuous Collision Detection
   useEffect(() => {
     if (isEraWon || isTransitionComplete) return;
 
@@ -115,15 +141,51 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
         return nextDist;
       });
 
-      // Update track items downward movement
+      // Update track items downward movement & perform collision detection directly at 60 FPS
       setTrackItems(prevItems => {
         const itemSpeed = (speedBoost ? 65 : 38); // % per second
+        let scoreGain = 0;
+        let relicsGained = 0;
+        const currentLane = playerLaneRef.current;
+
         const updated = prevItems
-          .map(item => ({
-            ...item,
-            y: item.y + itemSpeed * delta,
-          }))
+          .map(item => {
+            const nextY = item.y + itemSpeed * delta;
+
+            // Player hitbox is around Y: 68% to 88%
+            if (!item.collected && item.lane === currentLane && nextY >= 68 && nextY <= 88) {
+              if (item.type === 'collectible') {
+                scoreGain += 25;
+                relicsGained += 1;
+                soundEngine.playGemPop();
+                triggerFeedback('+25 ⭐', currentLane, 'collect');
+                return { ...item, y: nextY, collected: true };
+              } else {
+                soundEngine.playGlitch();
+                triggerFeedback('⚡ GLITCH!', currentLane, 'glitch');
+                return { ...item, y: nextY, collected: true };
+              }
+            }
+            return {
+              ...item,
+              y: nextY,
+            };
+          })
           .filter(item => item.y < 110); // Remove past screen
+
+        if (scoreGain > 0) {
+          setScore(s => s + scoreGain);
+          setRelicsCount(prev => {
+            const nextRelics = Math.min(TARGET_RELICS, prev + relicsGained);
+            if (nextRelics >= TARGET_RELICS && prev < TARGET_RELICS) {
+              soundEngine.playSuccess();
+              try {
+                confetti({ particleCount: 60, spread: 80, origin: { y: 0.4 } });
+              } catch { /* ignore */ }
+            }
+            return nextRelics;
+          });
+        }
 
         return updated;
       });
@@ -133,13 +195,13 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
 
     animationFrameId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isEraWon, isTransitionComplete, speedBoost]);
+  }, [isEraWon, isTransitionComplete, speedBoost, triggerFeedback]);
 
-  // Item Spawning based on distance traveled
+  // Item Spawning based on distance traveled (every 7 meters)
   useEffect(() => {
     if (isEraWon || isTransitionComplete) return;
 
-    if (lastSpawnDistanceRef.current - distanceRemaining > 9) {
+    if (lastSpawnDistanceRef.current - distanceRemaining > 7) {
       lastSpawnDistanceRef.current = distanceRemaining;
 
       const randomLane = Math.floor(Math.random() * 3);
@@ -161,39 +223,6 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
       setTrackItems(prev => [...prev, newItem]);
     }
   }, [distanceRemaining, isEraWon, isTransitionComplete]);
-
-  // Collision Detection with Player
-  useEffect(() => {
-    if (isEraWon || isTransitionComplete) return;
-
-    setTrackItems(prev => {
-      let scoreGain = 0;
-      let hitItem = false;
-
-      const next = prev.map(item => {
-        // Player hitbox is around y: 72% to 88%
-        if (!item.collected && item.lane === playerLane && item.y >= 70 && item.y <= 88) {
-          hitItem = true;
-          if (item.type === 'collectible') {
-            scoreGain += 25;
-            soundEngine.playGemPop();
-            return { ...item, collected: true };
-          } else {
-            // Anomaly: brief speed hitch and tap sound
-            soundEngine.playTap();
-            return { ...item, collected: true };
-          }
-        }
-        return item;
-      });
-
-      if (hitItem && scoreGain > 0) {
-        setScore(s => s + scoreGain);
-      }
-
-      return next;
-    });
-  }, [playerLane, isEraWon, isTransitionComplete]);
 
   // Countdown Portal Timer (Skill 9 Establishing Operation)
   useEffect(() => {
@@ -255,6 +284,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     setDistanceRemaining(100);
     setSecondsRemaining(initialTime);
     setExtensionsLeft(2);
+    setRelicsCount(0);
     setIsEraWon(false);
     setIsTransitionComplete(false);
     setTrackItems([]);
@@ -287,8 +317,20 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
             <span>{currentEra.name}</span>
           </div>
 
+          {/* TARGET MISSION COUNTER */}
+          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${
+            relicsCount >= TARGET_RELICS 
+              ? 'bg-emerald-950/90 border-emerald-400 text-emerald-300 shadow-md shadow-emerald-500/30 animate-pulse'
+              : 'bg-[#002833] border-amber-400/60 text-white shadow-sm'
+          }`}>
+            <Clock className={`w-3.5 h-3.5 ${relicsCount >= TARGET_RELICS ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <span className="text-xs font-black">
+              Relics: <span className={relicsCount >= TARGET_RELICS ? 'text-emerald-300 font-extrabold' : 'text-amber-300 font-bold'}>{relicsCount}/{TARGET_RELICS}</span>
+            </span>
+          </div>
+
           {/* Distance Meter to Time Portal */}
-          <div className="hidden sm:flex items-center gap-1.5 bg-[#002833] px-3 py-1 rounded-full border border-white/10">
+          <div className="hidden lg:flex items-center gap-1.5 bg-[#002833] px-3 py-1 rounded-full border border-white/10">
             <Sparkles className="w-3.5 h-3.5 text-[#38bdf8]" />
             <span className="text-xs font-black text-white">
               Gate: <span className="text-[#38bdf8] font-bold">{Math.round(distanceRemaining)}m</span>
@@ -365,6 +407,21 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
           </div>
         </div>
 
+        {/* OBJECTIVE INSTRUCTION BANNER */}
+        <div className="absolute top-2 inset-x-0 mx-auto max-w-sm md:max-w-md z-25 flex items-center justify-center pointer-events-none px-4">
+          <div className="bg-[#002029]/95 border-2 border-[#00c9a7]/60 rounded-full px-4 py-1.5 backdrop-blur-md shadow-xl flex items-center gap-3 text-[11px] md:text-xs font-black text-white">
+            <span className="text-amber-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>CATCH: Golden Relics (+25 ⭐)</span>
+            </span>
+            <span className="text-white/30">•</span>
+            <span className="text-fuchsia-300 flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-fuchsia-400" />
+              <span>DODGE: Glitches</span>
+            </span>
+          </div>
+        </div>
+
         {/* 3-LANE PERSPECTIVE HIGHWAY */}
         <div className="relative flex-1 max-w-2xl mx-auto w-full flex perspective-1000">
           {/* Lane 0: LEFT */}
@@ -418,17 +475,47 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
                   top: `${item.y}%`,
                   transform: 'translate(-50%, -50%)',
                 }}
-                className="absolute z-15 pointer-events-none transition-all duration-75"
+                className="absolute z-15 pointer-events-none transition-all duration-75 flex flex-col items-center"
               >
                 {item.type === 'collectible' && item.itemType ? (
-                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#00242e]/90 border-2 border-amber-400 p-1.5 shadow-lg shadow-amber-500/30 flex items-center justify-center animate-bounce">
-                    <TimeItemIcon type={item.itemType} />
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#00242e]/95 border-3 border-amber-400 p-1.5 shadow-xl shadow-amber-500/40 flex items-center justify-center animate-bounce">
+                      <TimeItemIcon type={item.itemType} />
+                    </div>
+                    <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full shadow-md tracking-wider uppercase">
+                      +25 ⭐
+                    </span>
                   </div>
                 ) : (
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-purple-900/90 border-2 border-fuchsia-400 p-1.5 shadow-lg shadow-fuchsia-500/40 flex items-center justify-center animate-pulse">
-                    <ShieldAlert className="w-8 h-8 text-fuchsia-300" />
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-purple-950/95 border-2 border-fuchsia-400 p-1.5 shadow-xl shadow-fuchsia-500/50 flex items-center justify-center animate-pulse">
+                      <ShieldAlert className="w-8 h-8 text-fuchsia-300" />
+                    </div>
+                    <span className="bg-fuchsia-600 text-white font-black text-[9px] px-2 py-0.5 rounded-full shadow-md tracking-wider uppercase">
+                      ⚡ GLITCH
+                    </span>
                   </div>
                 )}
+              </div>
+            );
+          })}
+
+          {/* FLOATING POPUP TEXT FEEDBACK (+25 ⭐ or ⚡ GLITCH!) */}
+          {feedbackList.map(fb => {
+            const laneX = fb.lane === 0 ? '16.6%' : fb.lane === 1 ? '50%' : '83.3%';
+            return (
+              <div
+                key={fb.id}
+                style={{
+                  left: laneX,
+                  bottom: '24%',
+                  transform: 'translate(-50%, 0)',
+                }}
+                className={`absolute z-35 font-black text-xl md:text-2xl pointer-events-none animate-bounce drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] ${
+                  fb.type === 'collect' ? 'text-amber-300 scale-125' : 'text-fuchsia-400'
+                }`}
+              >
+                {fb.text}
               </div>
             );
           })}
@@ -600,9 +687,21 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
             <h3 className="text-2xl md:text-3xl font-black text-white mb-2">
               Welcome to the Next Era!
             </h3>
-            <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
+            <p className="text-[#a5d8d8] text-sm font-semibold mb-4">
               You navigated the time vortex and arrived at the portal gate! Ready to warp forward?
             </p>
+
+            <div className="flex items-center gap-6 bg-[#002732] px-6 py-3 rounded-2xl border border-white/10 mb-6 shadow-inner">
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black uppercase text-[#84cece]">Relics Found</span>
+                <span className="text-xl font-black text-amber-300">{relicsCount} / {TARGET_RELICS}</span>
+              </div>
+              <div className="w-px h-8 bg-white/10"></div>
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black uppercase text-[#84cece]">Score</span>
+                <span className="text-xl font-black text-yellow-300">{score} pts</span>
+              </div>
+            </div>
 
             <div className="w-full flex flex-col gap-3">
               <button
