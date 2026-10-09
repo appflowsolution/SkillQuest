@@ -151,14 +151,9 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
                     <div className="flex items-start justify-between border-b border-[#004f61] pb-2 gap-2 shrink-0">
                       <div className="flex items-start gap-1.5 flex-1 min-w-0">
                         <Brain className="w-4 h-4 text-[#ffb703] shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[9px] font-black uppercase text-[#00f2c9] tracking-wider block">
-                            {game.skillCode}
-                          </span>
-                          <h4 className="text-xs font-black uppercase text-[#ffb703] leading-tight break-words">
-                            {game.skillName}
-                          </h4>
-                        </div>
+                        <h4 className="text-xs font-black uppercase text-[#ffb703] leading-tight break-words flex-1 min-w-0">
+                          {game.skillName}
+                        </h4>
                       </div>
 
                       <button
