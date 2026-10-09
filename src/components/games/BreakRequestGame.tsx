@@ -40,36 +40,26 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
   const [promptActive, setPromptActive] = useState(false);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
 
-  // Progressive difficulty calculations:
-  // Gem count scales smoothly from 4 up to 16 (+2 gems each round!)
-  const calculateGemCount = (r: number) => Math.min(4 + (r - 1) * 2, 16);
+  // Progressive difficulty:
+  // Scales quickly from 5 up to 25 crystals (+4 each round!)
+  // Round 1 = 5, Round 2 = 9, Round 3 = 13, Round 4 = 17, Round 5 = 21, Round 6+ = 25!
+  const calculateGemCount = (r: number) => Math.min(5 + (r - 1) * 4, 25);
 
-  // Timer: Seconds allowed per gem decreases as rounds increase (higher tempo demand)
-  // Round 1 (4 gems): ~14s (3.5s per gem)
-  // Round 3 (8 gems): ~18s (2.2s per gem)
-  // Round 5 (12 gems): ~20s (1.6s per gem)
-  // Round 7+ (16 gems): ~20s (1.25s per gem)
-  const calculateRoundTime = (r: number, count: number) => {
-    const secondsPerGem = Math.max(1.15, 3.2 - Math.min((r - 1) * 0.35, 2.05));
-    return Math.max(12, Math.round(count * secondsPerGem));
-  };
+  // User requested: 15 seconds per round for intense arcade tempo
+  const totalRoundSeconds = 15;
+  const [secondsRemaining, setSecondsRemaining] = useState(15);
 
-  const [totalRoundSeconds, setTotalRoundSeconds] = useState(14);
-  const [secondsRemaining, setSecondsRemaining] = useState(14);
-
-  // Break countdown timer
+  // Break countdown timer (rest time)
   const [breakSecondsLeft, setBreakSecondsLeft] = useState(30);
 
   // Inactivity tracking
   const inactivityTimerRef = useRef<number | null>(null);
 
-  // Generate gems with scaling quantity and adaptive sizing
+  // Generate gems with scaling quantity up to 25
   const generateGems = (currentRound: number) => {
     const count = calculateGemCount(currentRound);
-    const roundTime = calculateRoundTime(currentRound, count);
     
-    setTotalRoundSeconds(roundTime);
-    setSecondsRemaining(roundTime);
+    setSecondsRemaining(totalRoundSeconds);
     setIsTimeExpired(false);
 
     const colors = [
@@ -86,8 +76,8 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
     const newGems: GemItem[] = [];
     const usedPositions: { x: number; y: number }[] = [];
 
-    // Spacing tolerance tightens slightly as gem count increases so all 16 fit comfortably
-    const minDistance = count > 10 ? 11 : count > 6 ? 13 : 15;
+    // Tighter spacing grid to accommodate up to 25 items on iPad comfortably
+    const minDistance = count >= 20 ? 8.5 : count >= 13 ? 10 : count >= 8 ? 12 : 15;
 
     for (let i = 0; i < count; i++) {
       let x = 0;
@@ -95,13 +85,13 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
       let attempts = 0;
       let valid = false;
 
-      while (!valid && attempts < 80) {
+      while (!valid && attempts < 100) {
         attempts++;
-        x = Math.floor(Math.random() * 70) + 14; // 14% to 84% width
-        y = Math.floor(Math.random() * 58) + 14; // 14% to 72% height
+        x = Math.floor(Math.random() * 74) + 12; // 12% to 86% width
+        y = Math.floor(Math.random() * 62) + 13; // 13% to 75% height
 
         // Clear margin around the bottom-left Break button area
-        if (x < 36 && y > 58) continue;
+        if (x < 36 && y > 56) continue;
 
         const collision = usedPositions.some(
           pos => Math.abs(pos.x - x) < minDistance && Math.abs(pos.y - y) < minDistance
@@ -112,9 +102,9 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
       usedPositions.push({ x, y });
       const palette = colors[i % colors.length];
       
-      // Floating speed speeds up as rounds progress
-      const floatDuration = Math.max(1.8, 4.0 - Math.min(currentRound * 0.25, 2.2));
-      const floatDelay = (i * 0.2) % 1.5;
+      // Floating animation speed
+      const floatDuration = Math.max(1.8, 3.8 - Math.min(currentRound * 0.25, 2.0));
+      const floatDelay = (i * 0.15) % 1.5;
 
       newGems.push({
         id: i + 1,
@@ -141,7 +131,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
     };
   }, []);
 
-  // ROUND COUNTDOWN TIMER
+  // ROUND COUNTDOWN TIMER (15 seconds)
   useEffect(() => {
     let interval: number | null = null;
     if (!isBreakActive && !isTimeExpired && secondsRemaining > 0) {
@@ -186,7 +176,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
         setPromptActive(true);
         soundEngine.playPromptChime();
       }
-    }, 10000);
+    }, 8000);
   };
 
   // Collect gem on tap
@@ -203,8 +193,8 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
       soundEngine.playSuccess();
       try {
         confetti({
-          particleCount: 60,
-          spread: 75,
+          particleCount: 65,
+          spread: 80,
           origin: { y: 0.6 },
         });
       } catch {
@@ -259,45 +249,52 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
   const timePercentage = Math.max(0, Math.min(100, (secondsRemaining / totalRoundSeconds) * 100));
   const isTimeCritical = secondsRemaining <= 5;
 
-  // Adaptive gem sizing: scales down smoothly when there are 11-16 crystals so all fit with room to spare!
-  const gemButtonSize = totalCount >= 12 
-    ? 'w-16 h-16 md:w-18 md:h-18' 
-    : totalCount >= 8 
-    ? 'w-18 h-18 md:w-21 md:h-21' 
+  // Adaptive gem sizing: scales down for 20-25 crystals
+  const gemButtonSize = totalCount >= 20
+    ? 'w-12 h-12 md:w-14 md:h-14'
+    : totalCount >= 13
+    ? 'w-15 h-15 md:w-17 md:h-17'
+    : totalCount >= 8
+    ? 'w-18 h-18 md:w-20 md:h-20'
     : 'w-22 h-22 md:w-24 md:h-24';
 
-  const gemInnerSize = totalCount >= 12 
-    ? 'w-10 h-10 md:w-11 md:h-11' 
-    : totalCount >= 8 
-    ? 'w-12 h-12 md:w-13 md:h-13' 
+  const gemInnerSize = totalCount >= 20
+    ? 'w-8 h-8 md:w-9 md:h-9'
+    : totalCount >= 13
+    ? 'w-10 h-10 md:w-11 md:h-11'
+    : totalCount >= 8
+    ? 'w-12 h-12 md:w-13 md:h-13'
     : 'w-14 h-14 md:w-15 md:h-15';
 
-  const gemIconSize = totalCount >= 12 
-    ? 'w-5 h-5' 
-    : totalCount >= 8 
-    ? 'w-6 h-6' 
+  const gemIconSize = totalCount >= 20
+    ? 'w-4 h-4'
+    : totalCount >= 13
+    ? 'w-5 h-5'
+    : totalCount >= 8
+    ? 'w-6 h-6'
     : 'w-7 h-7';
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#002f3c] overflow-hidden relative select-none">
-      {/* Top Game Bar: Level, Gem Counter, Stars, and Live Timer */}
-      <div className="bg-[#003d4c] border-b-2 border-[#00576b] px-4 md:px-8 py-3 flex items-center justify-between shrink-0 z-30 shadow-md">
-        <div className="flex items-center gap-3 md:gap-5">
+      {/* Top Game Bar: Header with prominently wide timer gauge */}
+      <div className="bg-[#003d4c] border-b-2 border-[#00576b] px-3 md:px-6 py-2.5 flex items-center justify-between shrink-0 z-30 shadow-md gap-3">
+        {/* Left: Navigation and Level */}
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
             onClick={() => {
               soundEngine.playTap();
               onExit();
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#002833] hover:bg-[#001f28] active:scale-95 text-[#00f2c9] rounded-full font-black text-xs transition-all border border-[#00c9a7]/30"
+            className="flex items-center gap-1 px-3 py-1.5 bg-[#002833] hover:bg-[#001f28] active:scale-95 text-[#00f2c9] rounded-full font-black text-xs transition-all border border-[#00c9a7]/30"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Missions</span>
+            <span className="hidden sm:inline">Missions</span>
           </button>
 
-          {/* Round Level */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-black text-[#84cece] uppercase tracking-wider">Level:</span>
-            <span className="text-sm font-black text-slate-900 px-3 py-0.5 bg-[#ffb703] rounded-full shadow-sm">
+          {/* Level Badge */}
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-black text-[#84cece] uppercase tracking-wider hidden sm:inline">Level:</span>
+            <span className="text-xs md:text-sm font-black text-slate-900 px-2.5 py-1 bg-[#ffb703] rounded-full shadow-sm">
               Round {round}
             </span>
           </div>
@@ -306,58 +303,64 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
           <div className="flex items-center gap-1.5 bg-[#002833] px-3 py-1 rounded-full border border-white/10">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#00f2c9]" />
             <span className="text-xs font-black text-white">
-              {remainingCount} <span className="text-[#84cece] font-normal">/ {totalCount} left</span>
+              {remainingCount} <span className="text-[#84cece] font-normal">/ {totalCount}</span>
             </span>
-          </div>
-
-          {/* Stars */}
-          <div className="hidden sm:flex items-center gap-1.5">
-            <Star className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-            <span className="text-base font-black text-white">{score}</span>
           </div>
         </div>
 
-        {/* Center/Right: Live Countdown Timer */}
-        <div className="flex items-center gap-3 flex-1 max-w-xs mx-3">
-          <div className="flex items-center gap-1.5 text-xs font-black shrink-0 text-white">
+        {/* Center: WIDE AND PROMINENT ARCADE TIMER BAR */}
+        <div className="flex-1 max-w-sm md:max-w-md lg:max-w-xl mx-2 flex items-center gap-2.5">
+          {/* Clock Icon and Text */}
+          <div className="flex items-center gap-1.5 shrink-0 bg-[#002833] px-2.5 py-1 rounded-full border border-white/15">
             <Timer className={`w-4 h-4 ${isTimeCritical ? 'text-rose-400 animate-spin' : 'text-[#00f2c9]'}`} />
-            <span className={`w-8 text-right ${isTimeCritical ? 'text-rose-400 font-black text-sm' : 'text-white'}`}>
+            <span className={`text-xs md:text-sm font-black w-7 text-right ${isTimeCritical ? 'text-rose-400 animate-pulse text-base' : 'text-white'}`}>
               {secondsRemaining}s
             </span>
           </div>
 
-          <div className="flex-1 h-3.5 bg-[#00232d] rounded-full border border-white/20 overflow-hidden shadow-inner p-0.5">
+          {/* TALL & WIDE PROGRESS BAR GAUGE */}
+          <div className="flex-1 h-6 md:h-7 bg-[#002029] rounded-full border-2 border-white/30 overflow-hidden shadow-inner p-1 relative">
             <div
-              className={`h-full rounded-full transition-all duration-300 ${
+              className={`h-full rounded-full transition-all duration-300 relative ${
                 isTimeCritical
-                  ? 'bg-gradient-to-r from-rose-500 to-pink-500 animate-pulse'
+                  ? 'bg-gradient-to-r from-rose-500 via-red-500 to-pink-500 animate-pulse shadow-lg shadow-rose-500/50'
                   : timePercentage < 50
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-400'
-                  : 'bg-gradient-to-r from-emerald-400 to-[#00f2c9]'
+                  ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 shadow-md shadow-amber-500/30'
+                  : 'bg-gradient-to-r from-emerald-400 via-[#00f2c9] to-cyan-400 shadow-md shadow-cyan-500/30'
               }`}
               style={{ width: `${timePercentage}%` }}
-            ></div>
+            >
+              {/* Subtle glass reflection on the progress bar */}
+              <div className="absolute inset-x-0 top-0 h-1/2 bg-white/30 rounded-t-full"></div>
+            </div>
           </div>
         </div>
 
-        {/* Helper Hint Trigger */}
-        {!isBreakActive && !isTimeExpired && (
-          <button
-            onClick={() => {
-              setPromptActive(true);
-              soundEngine.playPromptChime();
-            }}
-            className={`px-3 py-1.5 rounded-full text-xs font-black transition-all flex items-center gap-1.5 border active:scale-95 ${
-              promptActive
-                ? 'bg-[#ffb703] text-slate-900 border-white shadow-md'
-                : 'bg-[#002b36] text-[#84cece] border-[#004f61] hover:text-white'
-            }`}
-            title="Helper hint"
-          >
-            <Zap className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="hidden sm:inline">{promptActive ? 'Hint On' : 'Hint'}</span>
-          </button>
-        )}
+        {/* Right: Stars and Hint */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden sm:flex items-center gap-1 bg-[#002833] px-2.5 py-1 rounded-full border border-white/10">
+            <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+            <span className="text-xs md:text-sm font-black text-white">{score}</span>
+          </div>
+
+          {!isBreakActive && !isTimeExpired && (
+            <button
+              onClick={() => {
+                setPromptActive(true);
+                soundEngine.playPromptChime();
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-black transition-all flex items-center gap-1 border active:scale-95 ${
+                promptActive
+                  ? 'bg-[#ffb703] text-slate-900 border-white shadow-md'
+                  : 'bg-[#002b36] text-[#84cece] border-[#004f61] hover:text-white'
+              }`}
+              title="Helper hint"
+            >
+              <Zap className="w-3.5 h-3.5 text-yellow-400" />
+              <span className="hidden md:inline">{promptActive ? 'Hint On' : 'Hint'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* MAIN PLAY ARENA */}
@@ -370,7 +373,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
           <div className="absolute top-2/3 left-1/3 w-3 h-3 bg-cyan-300 rounded-full"></div>
         </div>
 
-        {/* Floating gems in the arena with adaptive size */}
+        {/* Floating gems in the arena (up to 25 crystals) */}
         {!isBreakActive && !isTimeExpired && gems.map((gem) => {
           if (gem.collected) return null;
 
@@ -384,9 +387,9 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
                 animationDuration: `${gem.floatDuration}s`,
                 animationDelay: `${gem.floatDelay}s`,
               }}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 ${gemButtonSize} rounded-2xl md:rounded-3xl bg-[#004d60]/85 border-2 md:border-3 border-[#00f2c9] shadow-lg shadow-cyan-500/20 flex items-center justify-center transition-transform active:scale-90 hover:scale-105 z-10 animate-float-calm`}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 ${gemButtonSize} rounded-2xl md:rounded-3xl bg-[#004d60]/90 border-2 md:border-3 border-[#00f2c9] shadow-lg shadow-cyan-500/25 flex items-center justify-center transition-transform active:scale-90 hover:scale-105 z-10 animate-float-calm`}
             >
-              <div className={`${gemInnerSize} rounded-xl md:rounded-2xl bg-gradient-to-tr ${gem.color} flex items-center justify-center shadow-md border-2 border-white/60`}>
+              <div className={`${gemInnerSize} rounded-xl md:rounded-2xl bg-gradient-to-tr ${gem.color} flex items-center justify-center shadow-md border-2 border-white/70`}>
                 <Sparkles className={`${gemIconSize} text-white animate-pulse`} />
               </div>
             </button>
@@ -400,7 +403,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
             <span>
               {isTimeCritical 
                 ? 'Time running low! Tap fast or hit Take a Break!' 
-                : `Round ${round}: Catch all ${totalCount} crystals before time ends!`}
+                : `Round ${round}: Catch all ${totalCount} crystals in 15s!`}
             </span>
           </div>
         )}
@@ -450,7 +453,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
               Time Ran Out!
             </h3>
             <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
-              Round {round} had {totalCount} crystals and moved super fast! Want to take a break or try again?
+              Round {round} had {totalCount} crystals in 15 seconds! Want to take a calm break or try again?
             </p>
 
             <div className="w-full flex flex-col gap-3">
