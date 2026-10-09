@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/components/Dashboard.tsx","./src/components/GameCardIllustration.tsx","./src/components/Header.tsx","./src/components/games/BreakRequestGame.tsx","./src/data/games.ts","./src/types/index.ts","./src/utils/audio.ts"],"version":"5.9.3"}
