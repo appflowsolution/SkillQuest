@@ -23,7 +23,7 @@ export const GAMES_CATALOG: GameMetadata[] = [
     genre: 'Adventure Quest',
     ribbon: 'MISSION 2',
     ribbonColor: 'bg-cyan-500 text-white',
-    isAvailable: false,
+    isAvailable: true,
     skillName: 'Requesting More Time / Transition Tolerance',
     skillCode: 'Skill 9',
     skillDescription: 'Requesting a brief time extension ("one more minute") before a preferred activity ends, reducing emotional distress during scheduled transitions.',

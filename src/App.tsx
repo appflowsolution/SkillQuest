@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { BreakRequestGame } from './components/games/BreakRequestGame';
+import { TimeWarpGame } from './components/games/TimeWarpGame';
 import { GameId } from './types';
 import { GAMES_CATALOG } from './data/games';
 import { soundEngine } from './utils/audio';
@@ -50,6 +51,8 @@ export function App() {
         <Dashboard onSelectGame={handleSelectGame} rbtMode={rbtMode} />
       ) : activeGameId === 'break-request' ? (
         <BreakRequestGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
+      ) : activeGameId === 'more-time' ? (
+        <TimeWarpGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-slate-400">Module in development</p>
