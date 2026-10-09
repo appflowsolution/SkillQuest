@@ -66,7 +66,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
             const isFlipped = !!flippedCards[game.id];
 
             return (
-              <div key={game.id} className="perspective-1000 w-full h-[260px] md:h-[280px]">
+              <div key={game.id} className="perspective-1000 w-full h-[275px] md:h-[295px]">
                 {/* 3D Flipping Card Container */}
                 <div
                   className={`w-full h-full relative transition-transform duration-500 preserve-3d ${
