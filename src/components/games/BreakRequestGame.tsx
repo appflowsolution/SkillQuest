@@ -13,15 +13,17 @@ import {
   Timer,
   CheckCircle2
 } from 'lucide-react';
+import { CosmicItemIcon, CosmicItemType } from './CosmicItemIcon';
 
 interface GemItem {
   id: number;
   x: number;
   y: number;
+  itemType: CosmicItemType;
   color: string;
-  iconBg: string;
+  borderColor: string;
+  label: string;
   collected: boolean;
-  shape: 'diamond' | 'circle' | 'star';
   floatDuration: number;
   floatDelay: number;
 }
@@ -62,15 +64,12 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
     setSecondsRemaining(totalRoundSeconds);
     setIsTimeExpired(false);
 
-    const colors = [
-      { color: 'from-[#00f2c9] to-[#00a890]', iconBg: 'bg-[#00d2b4]', shape: 'diamond' as const },
-      { color: 'from-[#ffb703] to-[#fb8500]', iconBg: 'bg-amber-400', shape: 'circle' as const },
-      { color: 'from-[#ff477e] to-[#d90429]', iconBg: 'bg-pink-500', shape: 'star' as const },
-      { color: 'from-[#8ac926] to-[#55a630]', iconBg: 'bg-emerald-400', shape: 'diamond' as const },
-      { color: 'from-[#7209b7] to-[#560bad]', iconBg: 'bg-purple-500', shape: 'circle' as const },
-      { color: 'from-[#4cc9f0] to-[#4361ee]', iconBg: 'bg-cyan-400', shape: 'star' as const },
-      { color: 'from-[#f72585] to-[#b5179e]', iconBg: 'bg-rose-500', shape: 'diamond' as const },
-      { color: 'from-[#fee440] to-[#f77f00]', iconBg: 'bg-yellow-400', shape: 'circle' as const },
+    const cosmicVariants: { itemType: CosmicItemType; label: string; color: string; borderColor: string }[] = [
+      { itemType: 'gem', label: 'Cosmic Crystal', color: 'from-[#00f2c9]/30 to-[#00a890]/15', borderColor: 'border-[#00f2c9]' },
+      { itemType: 'planet', label: 'Ringed Planet', color: 'from-[#38bdf8]/30 to-[#0284c7]/15', borderColor: 'border-[#38bdf8]' },
+      { itemType: 'rocket', label: 'Cosmic Rocket', color: 'from-[#f87171]/30 to-[#ef4444]/15', borderColor: 'border-[#f87171]' },
+      { itemType: 'constellation', label: 'Glowing Star', color: 'from-[#fde047]/30 to-[#f59e0b]/15', borderColor: 'border-[#fde047]' },
+      { itemType: 'moon', label: 'Crescent Moon', color: 'from-[#fef08a]/30 to-[#eab308]/15', borderColor: 'border-[#fde047]' },
     ];
 
     const newGems: GemItem[] = [];
@@ -100,7 +99,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
       }
 
       usedPositions.push({ x, y });
-      const palette = colors[i % colors.length];
+      const variant = cosmicVariants[i % cosmicVariants.length];
       
       // Floating animation speed
       const floatDuration = Math.max(1.8, 3.8 - Math.min(currentRound * 0.25, 2.0));
@@ -110,10 +109,11 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
         id: i + 1,
         x,
         y,
-        color: palette.color,
-        iconBg: palette.iconBg,
+        itemType: variant.itemType,
+        color: variant.color,
+        borderColor: variant.borderColor,
+        label: variant.label,
         collected: false,
-        shape: palette.shape,
         floatDuration,
         floatDelay,
       });
@@ -266,13 +266,6 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
     ? 'w-12 h-12 md:w-13 md:h-13'
     : 'w-14 h-14 md:w-15 md:h-15';
 
-  const gemIconSize = totalCount >= 20
-    ? 'w-4 h-4'
-    : totalCount >= 13
-    ? 'w-5 h-5'
-    : totalCount >= 8
-    ? 'w-6 h-6'
-    : 'w-7 h-7';
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#002f3c] overflow-hidden relative select-none">
@@ -373,7 +366,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
           <div className="absolute top-2/3 left-1/3 w-3 h-3 bg-cyan-300 rounded-full"></div>
         </div>
 
-        {/* Floating gems in the arena (up to 25 crystals) */}
+        {/* Floating cosmic collectibles in the arena (crystals, planets, rockets, stars, moons) */}
         {!isBreakActive && !isTimeExpired && gems.map((gem) => {
           if (gem.collected) return null;
 
@@ -387,10 +380,15 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
                 animationDuration: `${gem.floatDuration}s`,
                 animationDelay: `${gem.floatDelay}s`,
               }}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 ${gemButtonSize} rounded-2xl md:rounded-3xl bg-[#004d60]/90 border-2 md:border-3 border-[#00f2c9] shadow-lg shadow-cyan-500/25 flex items-center justify-center transition-transform active:scale-90 hover:scale-105 z-10 animate-float-calm`}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 ${gemButtonSize} rounded-full bg-[#00242e]/90 backdrop-blur-sm border-2 md:border-3 ${gem.borderColor} shadow-xl shadow-cyan-500/25 flex items-center justify-center transition-transform active:scale-90 hover:scale-110 z-10 animate-float-calm group/item cursor-pointer`}
+              title={gem.label}
             >
-              <div className={`${gemInnerSize} rounded-xl md:rounded-2xl bg-gradient-to-tr ${gem.color} flex items-center justify-center shadow-md border-2 border-white/70`}>
-                <Sparkles className={`${gemIconSize} text-white animate-pulse`} />
+              {/* Inner ambient glow on hover */}
+              <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
+              
+              {/* Authentic Cosmic Illustration matching game cover art */}
+              <div className={`${gemInnerSize} flex items-center justify-center p-1 filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]`}>
+                <CosmicItemIcon type={gem.itemType} />
               </div>
             </button>
           );
@@ -403,7 +401,7 @@ export const BreakRequestGame = ({ onExit }: BreakRequestGameProps) => {
             <span>
               {isTimeCritical 
                 ? 'Time running low! Tap fast or hit Take a Break!' 
-                : `Round ${round}: Catch all ${totalCount} crystals in 15s!`}
+                : `Round ${round}: Collect all ${totalCount} cosmic treasures in 15s!`}
             </span>
           </div>
         )}
