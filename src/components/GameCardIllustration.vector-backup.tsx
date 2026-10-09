@@ -169,3 +169,5 @@ export const GameCardIllustration: FC<GameCardIllustrationProps> = ({ gameId }) 
       return null;
   }
 };
+
+export const VectorGameIllustration = GameCardIllustration;
