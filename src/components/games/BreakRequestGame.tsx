@@ -28,7 +28,7 @@ interface BreakRequestGameProps {
 }
 
 export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => {
-  // Estado del juego
+  // Game state
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [gems, setGems] = useState<GemItem[]>([]);
@@ -36,17 +36,17 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
   const [promptActive, setPromptActive] = useState(false);
   const [lastActionWasPrompted, setLastActionWasPrompted] = useState(false);
   
-  // Temporizador de descanso
+  // Break countdown timer
   const [breakSecondsLeft, setBreakSecondsLeft] = useState(30);
 
-  // Registro clínico RBT
+  // RBT Clinical Tracking
   const [independentBreaks, setIndependentBreaks] = useState(0);
   const [promptedBreaks, setPromptedBreaks] = useState(0);
 
-  // Control de inactividad para prompt automático
+  // Inactivity tracking for automatic prompt
   const inactivityTimerRef = useRef<number | null>(null);
 
-  // Generar gemas por ronda
+  // Generate gems per round
   const generateGems = (currentRound: number) => {
     const count = Math.min(3 + currentRound, 6);
     const colors = [
@@ -69,10 +69,10 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
 
       while (!valid && attempts < 50) {
         attempts++;
-        x = Math.floor(Math.random() * 65) + 15; // 15% a 80% ancho
-        y = Math.floor(Math.random() * 55) + 15; // 15% a 70% alto
+        x = Math.floor(Math.random() * 65) + 15; // 15% to 80% width
+        y = Math.floor(Math.random() * 55) + 15; // 15% to 70% height
 
-        // Evitar esquina inferior izquierda (donde vive el botón de break)
+        // Avoid bottom-left corner where the Break Button resides
         if (x < 35 && y > 60) continue;
 
         const collision = usedPositions.some(
@@ -98,7 +98,7 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
     resetInactivityTimer();
   };
 
-  // Inicializar primera ronda
+  // Initialize round 1
   useEffect(() => {
     generateGems(1);
     return () => {
@@ -106,7 +106,7 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
     };
   }, []);
 
-  // Temporizador de descanso (Break countdown)
+  // Break countdown
   useEffect(() => {
     let interval: number | null = null;
     if (isBreakActive && breakSecondsLeft > 0) {
@@ -119,7 +119,7 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
     };
   }, [isBreakActive, breakSecondsLeft]);
 
-  // Manejador de inactividad (Prompt sugerido automático tras 14s de inactividad)
+  // Inactivity timeout (automatic prompt after 14s of hesitation)
   const resetInactivityTimer = () => {
     if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
     setPromptActive(false);
@@ -132,7 +132,7 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
     }, 14000);
   };
 
-  // Tocar una gema
+  // Collect gem on tap
   const handleCollectGem = (id: number) => {
     soundEngine.playGemPop();
     resetInactivityTimer();
@@ -161,7 +161,7 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
     }
   };
 
-  // ACCIÓN PRINCIPAL: Solicitar Descanso (Break Request)
+  // CORE ABA TARGET: Break Request
   const handleRequestBreak = (wasPrompted: boolean) => {
     soundEngine.playBreakBell();
     setIsBreakActive(true);
@@ -182,11 +182,11 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
         origin: { x: 0.2, y: 0.8 },
       });
     } catch {
-      // Ignorar
+      // Ignore
     }
   };
 
-  // Reanudar tras el descanso
+  // Resume after break
   const handleResumeFromBreak = () => {
     soundEngine.playTap();
     setIsBreakActive(false);
@@ -194,82 +194,82 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
     resetInactivityTimer();
   };
 
-  // Forzar activación de prompt manual por la RBT
+  // Manual RBT prompt trigger
   const handleTriggerRbtPrompt = () => {
     setPromptActive(true);
     soundEngine.playPromptChime();
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden relative select-none">
-      {/* Barra Superior del Juego: Puntaje y Ronda + Barra Co-Piloto */}
-      <div className="bg-slate-900/90 border-b border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 z-30">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden relative select-none">
+      {/* Top Game Bar: Round, Points & RBT Co-Pilot */}
+      <div className="bg-white/95 border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0 z-30 shadow-sm">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Misión:</span>
-            <span className="text-sm font-black text-white px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-lg border border-amber-500/30">
-              Ronda {round}
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mission:</span>
+            <span className="text-sm font-black text-slate-900 px-2.5 py-1 bg-amber-100 text-amber-900 rounded-lg border border-amber-300">
+              Round {round}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Puntos Estelares:</span>
-            <span className="text-lg font-black text-amber-400">{score}</span>
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Star Points:</span>
+            <span className="text-lg font-black text-amber-600">{score}</span>
           </div>
         </div>
 
-        {/* Controles de la RBT */}
+        {/* RBT Supervisor Controls */}
         <div className="flex items-center gap-3">
           {rbtMode && (
-            <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-3 py-1.5 rounded-xl">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 mr-2">
+            <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 mr-2">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Indep: {independentBreaks}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700">
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span>Prompt: {promptedBreaks}</span>
               </div>
             </div>
           )}
 
-          {/* Botón de la RBT para modelar el prompt */}
+          {/* RBT Prompt Model Button */}
           {!isBreakActive && (
             <button
               onClick={handleTriggerRbtPrompt}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border active:scale-95 ${
                 promptActive
-                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/30'
-                  : 'bg-slate-800 text-amber-300 border-amber-500/40 hover:bg-slate-700'
+                  ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-md shadow-amber-500/30 font-black'
+                  : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-50'
               }`}
-              title="Hace parpadear el botón de Break para modelar la ayuda al niño"
+              title="Flash the Break button to model assistance"
             >
-              <Zap className="w-3.5 h-3.5" />
-              <span>{promptActive ? 'Prompt Activo' : 'Sugerir Break'}</span>
+              <Zap className="w-3.5 h-3.5 text-amber-600" />
+              <span>{promptActive ? 'Prompt Active' : 'Suggest Break'}</span>
             </button>
           )}
 
           <button
             onClick={onExit}
-            className="text-xs font-bold px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+            className="text-xs font-bold px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 transition-colors"
           >
-            Salir
+            Exit
           </button>
         </div>
       </div>
 
-      {/* ÁREA PRINCIPAL DE JUEGO */}
-      <div className="flex-1 relative bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950/30 overflow-hidden">
-        {/* Fondo de estrellas ambientales */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-1/4 left-1/5 w-1 h-1 bg-white rounded-full animate-ping"></div>
-          <div className="absolute top-3/4 left-2/3 w-1.5 h-1.5 bg-cyan-300 rounded-full animate-pulse"></div>
-          <div className="absolute top-1/3 left-3/4 w-1 h-1 bg-amber-200 rounded-full"></div>
-          <div className="absolute top-2/3 left-1/3 w-1.5 h-1.5 bg-violet-300 rounded-full"></div>
+      {/* MAIN PLAY ARENA (LIGHT MODE SKY/STARS) */}
+      <div className="flex-1 relative bg-gradient-to-b from-sky-50 via-indigo-50/40 to-slate-100 overflow-hidden">
+        {/* Soft floating stars & particles background */}
+        <div className="absolute inset-0 opacity-40 pointer-events-none">
+          <div className="absolute top-1/4 left-1/5 w-2 h-2 bg-indigo-300 rounded-full animate-ping"></div>
+          <div className="absolute top-3/4 left-2/3 w-3 h-3 bg-cyan-300 rounded-full animate-pulse"></div>
+          <div className="absolute top-1/3 left-3/4 w-2 h-2 bg-amber-300 rounded-full"></div>
+          <div className="absolute top-2/3 left-1/3 w-2.5 h-2.5 bg-violet-300 rounded-full"></div>
         </div>
 
-        {/* Gemas en la pantalla */}
+        {/* Floating gems in the arena */}
         {!isBreakActive && gems.map((gem) => {
           if (gem.collected) return null;
 
@@ -281,32 +281,32 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
                 left: `${gem.x}%`,
                 top: `${gem.y}%`,
               }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-slate-900/80 border-2 border-cyan-400/50 shadow-xl shadow-cyan-500/20 flex items-center justify-center transition-transform active:scale-90 hover:scale-105 z-10 animate-float-calm"
+              className="absolute -translate-x-1/2 -translate-y-1/2 w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white border-2 border-indigo-200 shadow-xl shadow-indigo-500/15 flex items-center justify-center transition-transform active:scale-90 hover:scale-105 z-10 animate-float-calm"
             >
-              <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-tr ${gem.color} flex items-center justify-center shadow-inner`}>
+              <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-tr ${gem.color} flex items-center justify-center shadow-md`}>
                 <Sparkles className="w-6 h-6 md:w-7 md:h-7 text-white animate-pulse" />
               </div>
             </button>
           );
         })}
 
-        {/* Guía en pantalla para el niño */}
+        {/* Guided instruction pill */}
         {!isBreakActive && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur border border-slate-800 px-5 py-2 rounded-full pointer-events-none text-slate-300 text-xs md:text-sm font-semibold flex items-center gap-2 shadow-lg">
-            <Info className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>Toca las gemas estelares para sumar puntos</span>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur border border-slate-200 px-5 py-2 rounded-full pointer-events-none text-slate-700 text-xs md:text-sm font-bold flex items-center gap-2 shadow-sm">
+            <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>Tap the star crystals to collect points</span>
           </div>
         )}
 
-        {/* EL BOTÓN CRÍTICO DE DESCANSO (BREAK BUTTON) */}
+        {/* THE CORE TARGET: BIG BREAK BUTTON */}
         {!isBreakActive && (
           <div className="absolute bottom-6 left-6 z-20">
             <button
               onClick={() => handleRequestBreak(promptActive)}
-              className={`min-w-[260px] md:min-w-[300px] h-20 md:h-24 px-6 rounded-3xl flex items-center justify-center gap-4 transition-all duration-200 shadow-2xl active:scale-95 ${
+              className={`min-w-[260px] md:min-w-[300px] h-20 md:h-24 px-6 rounded-3xl flex items-center justify-center gap-4 transition-all duration-200 shadow-xl active:scale-95 ${
                 promptActive
-                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-slate-950 ring-4 ring-amber-300 ring-offset-4 ring-offset-slate-950 scale-105 animate-pulse-subtle shadow-amber-500/50'
-                  : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white border-2 border-amber-400/40 shadow-orange-950/50'
+                  ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 text-slate-950 ring-4 ring-amber-400 ring-offset-4 ring-offset-slate-100 scale-105 animate-pulse-subtle shadow-amber-500/40'
+                  : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white border-2 border-amber-300 shadow-orange-500/20'
               }`}
             >
               <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center shrink-0 ${
@@ -318,12 +318,12 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
                 <div className={`text-base md:text-lg font-black tracking-tight ${
                   promptActive ? 'text-slate-950' : 'text-white'
                 }`}>
-                  NECESITO UN DESCANSO
+                  I NEED A BREAK
                 </div>
                 <div className={`text-xs font-extrabold uppercase tracking-wider ${
-                  promptActive ? 'text-slate-900 font-black' : 'text-amber-200'
+                  promptActive ? 'text-slate-900 font-black' : 'text-amber-100'
                 }`}>
-                  Toca aquí para pausar
+                  Tap here to pause
                 </div>
               </div>
             </button>
@@ -331,48 +331,48 @@ export const BreakRequestGame = ({ rbtMode, onExit }: BreakRequestGameProps) => 
         )}
       </div>
 
-      {/* PANTALLA DE CALMA / BREAK ACTIVE OVERLAY */}
+      {/* CALM OVERLAY SCREEN (BREAK ACTIVE) */}
       {isBreakActive && (
-        <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
-          {/* Tarjeta de Felicitación por Pedir Descanso */}
-          <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center">
-            <div className="w-20 h-20 rounded-3xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mb-4 shadow-lg shadow-amber-500/10">
+        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+          {/* Praise Card for Requesting Break */}
+          <div className="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-2xl flex flex-col items-center">
+            <div className="w-20 h-20 rounded-3xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-600 mb-4 shadow-md">
               <Coffee className="w-10 h-10" />
             </div>
 
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-full text-xs font-extrabold uppercase tracking-wider mb-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-full text-xs font-extrabold uppercase tracking-wider mb-2">
               <CheckCircle2 className="w-4 h-4" />
-              <span>{lastActionWasPrompted ? '¡Petición Asistida!' : '¡Petición Independiente!'}</span>
+              <span>{lastActionWasPrompted ? 'Prompted Request!' : 'Independent Request!'}</span>
             </div>
 
-            <h3 className="text-2xl md:text-3xl font-black text-white mb-2">
-              ¡Muy bien por avisar!
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-2">
+              Awesome job asking!
             </h3>
-            <p className="text-slate-300 text-sm font-medium mb-6">
-              Pedir un descanso es una gran habilidad. Tómate un momento para respirar y relajarte.
+            <p className="text-slate-600 text-sm font-medium mb-6">
+              Asking for a break is a fantastic skill. Take a moment to relax and breathe.
             </p>
 
-            {/* Esfera de respiración guiada */}
+            {/* Guided Breathing Sphere */}
             <div className="relative w-36 h-36 flex items-center justify-center mb-6">
-              <div className="absolute inset-0 rounded-full bg-indigo-500/20 border border-indigo-400/30 animate-breathe"></div>
+              <div className="absolute inset-0 rounded-full bg-indigo-100 border border-indigo-300 animate-breathe"></div>
               <div className="relative z-10 flex flex-col items-center">
-                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
-                  Inhala • Exhala
+                <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                  Breathe In • Out
                 </span>
-                <span className="text-2xl font-black text-white flex items-center gap-1 mt-1">
-                  <Clock className="w-5 h-5 text-indigo-400" />
+                <span className="text-2xl font-black text-slate-900 flex items-center gap-1 mt-1">
+                  <Clock className="w-5 h-5 text-indigo-600" />
                   {breakSecondsLeft}s
                 </span>
               </div>
             </div>
 
-            {/* Botón para Reanudar Cuando el Niño Esté Listo */}
+            {/* Button to Resume When Ready */}
             <button
               onClick={handleResumeFromBreak}
-              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-98 text-white rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 transition-all border border-emerald-400/30"
+              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-98 text-white rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition-all border border-emerald-400"
             >
               <Play className="w-5 h-5 fill-white" />
-              <span>¡Estoy listo para jugar!</span>
+              <span>I am ready to play!</span>
             </button>
           </div>
         </div>

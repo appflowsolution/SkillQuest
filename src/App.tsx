@@ -10,7 +10,7 @@ export function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'game'>('dashboard');
   const [activeGameId, setActiveGameId] = useState<GameId | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [rbtMode, setRbtMode] = useState(true); // Activo por defecto para que la RBT vea sus opciones clínicas
+  const [rbtMode, setRbtMode] = useState(true);
 
   const handleSelectGame = (gameId: GameId) => {
     setActiveGameId(gameId);
@@ -35,7 +35,7 @@ export function App() {
   const activeGame = GAMES_CATALOG.find(g => g.id === activeGameId);
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans">
+    <div className="w-full h-full flex flex-col bg-slate-50 text-slate-900 overflow-hidden font-sans">
       <Header
         currentView={currentView}
         activeGameTitle={activeGame?.title}
@@ -52,7 +52,7 @@ export function App() {
         <BreakRequestGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400">Juego en construcción</p>
+          <p className="text-slate-400">Module in development</p>
         </div>
       )}
     </div>
