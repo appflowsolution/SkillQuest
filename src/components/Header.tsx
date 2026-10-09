@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Volume2, VolumeX, Search, Gamepad2, ArrowLeft, Sparkles } from 'lucide-react';
+import { Volume2, VolumeX, Search, Gamepad2, ArrowLeft, Zap } from 'lucide-react';
 import { soundEngine } from '../utils/audio';
 
 interface HeaderProps {
@@ -34,11 +34,10 @@ export const Header = ({
             className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 active:scale-95 text-[#006f60] rounded-full font-black text-sm md:text-base transition-all border-2 border-white/60 shadow-md"
           >
             <ArrowLeft className="w-5 h-5 text-[#00a890]" />
-            <span>All Games</span>
+            <span>Mission Hub</span>
           </button>
         ) : (
           <div className="flex items-center gap-2.5 cursor-pointer">
-            {/* Playful ABCya-style bubbly logo */}
             <div className="flex items-center">
               <span className="text-2xl md:text-3xl font-black tracking-tight text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] flex items-center gap-1">
                 <span className="bg-[#ff477e] text-white px-2 py-0.5 rounded-xl rotate-[-3deg] shadow-sm">Skill</span>
@@ -56,12 +55,12 @@ export const Header = ({
         )}
       </div>
 
-      {/* Middle: Pill Search Bar (ABCya style) */}
+      {/* Middle: Pill Search Bar */}
       <div className="hidden md:flex items-center flex-1 max-w-xs mx-6">
         <div className="relative w-full">
           <input
             type="text"
-            placeholder="Search SkillQuest games..."
+            placeholder="Search missions..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white text-slate-800 placeholder-slate-400 text-xs md:text-sm font-semibold rounded-full pl-9 pr-4 py-2 border-2 border-transparent focus:border-[#008f7a] focus:outline-none shadow-inner"
@@ -70,12 +69,12 @@ export const Header = ({
         </div>
       </div>
 
-      {/* Right: Quick actions */}
+      {/* Right: Player Badge & Audio Toggle */}
       <div className="flex items-center gap-3">
-        {/* Grade 5 Badge Pill */}
+        {/* Player 1 Badge Pill */}
         <div className="flex items-center gap-1.5 bg-[#009b84] text-white px-3.5 py-1.5 rounded-full border border-white/30 text-xs font-black shadow-inner">
-          <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-          <span>GRADE 5</span>
+          <Zap className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+          <span>HERO ZONE</span>
         </div>
 
         {/* Audio Mute Button */}
