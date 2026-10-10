@@ -35,32 +35,32 @@ const VOWEL_MODELS: VowelModel[] = [
   {
     vowel: 'a',
     name: 'Bop',
-    soundLabel: '¡AAAAA!',
-    articulatoryTip: 'Abre la boca grande como un león',
+    soundLabel: 'A!',
+    articulatoryTip: 'Open mouth wide like a lion',
     bgColor: 'from-amber-500/20 to-orange-500/10 border-amber-400/50',
     activeColor: 'bg-gradient-to-t from-amber-500 to-yellow-300 text-slate-950 shadow-amber-500/50',
   },
   {
     vowel: 'e',
     name: 'Gigi',
-    soundLabel: '¡EEEEE!',
-    articulatoryTip: 'Haz una sonrisa gigante mostrando dientes',
+    soundLabel: 'E!',
+    articulatoryTip: 'Stretch a wide smiling mouth showing teeth',
     bgColor: 'from-cyan-500/20 to-teal-500/10 border-cyan-400/50',
     activeColor: 'bg-gradient-to-t from-cyan-400 to-teal-300 text-slate-950 shadow-cyan-500/50',
   },
   {
     vowel: 'o',
     name: 'Ozzo',
-    soundLabel: '¡OOOOO!',
-    articulatoryTip: 'Redondea los labios como una trompeta',
+    soundLabel: 'O!',
+    articulatoryTip: 'Round lips forward like a trumpet horn',
     bgColor: 'from-fuchsia-500/20 to-pink-500/10 border-fuchsia-400/50',
     activeColor: 'bg-gradient-to-t from-fuchsia-500 to-pink-400 text-white shadow-fuchsia-500/50',
   },
 ];
 
 export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit }) => {
-  // Game Modes: 'jam' (Free Play) vs 'quest' (Model -> Imitate Challenge)
-  const [gameMode, setGameMode] = useState<'jam' | 'quest'>('quest');
+  // Game Modes: 'quest' (Model -> Imitate Challenge) vs 'jam' (Free Play)
+  const [gameMode, setGameMode] = useState<'quest' | 'jam'>('quest');
 
   // Active Singing State per Critter
   const [activeVowel, setActiveVowel] = useState<VowelType | null>(null);
@@ -94,7 +94,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
   // Equalizer visualizer animation state
   const [equalizerBars, setEqualizerBars] = useState<number[]>([30, 60, 45, 80, 50, 70, 40]);
 
-  // Handle Play Vowel Sound and Trigger Critter Animation
+  // Handle Play Vowel Sound with Microsoft AvaNeural and Trigger Critter Mouth Viseme
   const triggerVowelSound = useCallback((vowel: VowelType) => {
     setActiveVowel(vowel);
     soundEngine.playVowelSound(vowel);
@@ -108,8 +108,11 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
   }, []);
 
   // CELEBRATION EFFECT (Confetti + Fanfare)
-  const triggerCelebration = useCallback((message: string, isIndependent = true) => {
+  const triggerCelebration = useCallback((message: string, isIndependent = true, praiseAudio?: 'heard_you' | 'great_job' | 'good_try') => {
     soundEngine.playCheer();
+    if (praiseAudio) {
+      setTimeout(() => soundEngine.playEchoPraise(praiseAudio), 400);
+    }
     setFeedbackText(message);
     setAllCrittersDancing(true);
     setStreak(s => s + 1);
@@ -135,21 +138,23 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
     setTimeout(() => {
       setFeedbackText(null);
       setAllCrittersDancing(false);
-    }, 2200);
+    }, 2400);
   }, []);
 
-  // START MODELING CURRENT TARGET IN ECHO QUEST
+  // START MODELING CURRENT TARGET IN ECHO QUEST USING AVANEURAL
   const modelCurrentVowel = useCallback(() => {
     setIsModeling(true);
     setWaitingForChild(false);
-    triggerVowelSound(currentTarget.vowel);
+    setActiveVowel(currentTarget.vowel);
+    soundEngine.playEchoModel(currentTarget.vowel);
 
     setTimeout(() => {
       setIsModeling(false);
+      setActiveVowel(null);
       setWaitingForChild(true);
       setImitationLatencySeconds(6);
-    }, 1100);
-  }, [currentTarget, triggerVowelSound]);
+    }, 1400);
+  }, [currentTarget]);
 
   // Advance to next target in Echo Quest
   const advanceNextTarget = useCallback(() => {
@@ -170,19 +175,19 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
     // In Quest mode: check match
     if (selectedVowel === currentTarget.vowel || viaMic) {
       const msg = viaMic 
-        ? '¡TE ESCUCHÉ! ¡SONIDO INCREÍBLE! 🎤⭐' 
-        : `¡EXCELENTE! ¡IMITASTE LA "${currentTarget.vowel.toUpperCase()}"! ⭐`;
+        ? 'AWESOME! I HEARD YOU! 🎤⭐' 
+        : `EXCELLENT! YOU ECHOED "${currentTarget.vowel.toUpperCase()}"! ⭐`;
 
-      triggerCelebration(msg, true);
+      triggerCelebration(msg, true, viaMic ? 'heard_you' : 'great_job');
 
       // Advance after a brief delay
       setTimeout(() => {
         advanceNextTarget();
-      }, 2000);
+      }, 2200);
     } else {
       // Wrong vowel tapped during quest: gentle sound and reminder
       soundEngine.playTap();
-      setFeedbackText(`¡Casi! Escucha a ${currentTarget.name}: "${currentTarget.vowel.toUpperCase()}"`);
+      setFeedbackText(`Almost! Listen to ${currentTarget.name}: "${currentTarget.vowel.toUpperCase()}"`);
       setTimeout(() => setFeedbackText(null), 1800);
     }
   }, [gameMode, currentTarget, triggerVowelSound, triggerCelebration, advanceNextTarget]);
@@ -196,7 +201,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
         if (prev <= 1) {
           // Window expired without pressure: gentle remodel
           setWaitingForChild(false);
-          setFeedbackText(`¡Vamos a intentarlo juntos!`);
+          setFeedbackText(`Let's try together!`);
           setTimeout(() => {
             setFeedbackText(null);
             modelCurrentVowel();
@@ -257,7 +262,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
       setIsMicEnabled(true);
       soundEngine.playSuccess();
     } catch {
-      setMicError('Micrófono no disponible en este dispositivo. Puedes usar los botones táctiles.');
+      setMicError('Microphone is unavailable on this device. You can use the touch pads!');
       setIsMicEnabled(false);
     }
   };
@@ -292,7 +297,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
         handleVowelAttempt(currentTarget.vowel, true);
         setTimeout(() => {
           debounceVoiceTrigger = false;
-        }, 2200);
+        }, 2400);
       }
 
       animId = requestAnimationFrame(checkVolume);
@@ -342,33 +347,33 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
           </div>
         </div>
 
-        {/* Center: Mode Selector (Quest vs Jam) */}
+        {/* Center: Mode Selector (Echo Quest vs Free Jam) */}
         <div className="flex items-center bg-[#150029] p-1 rounded-full border border-purple-500/30">
           <button
             onClick={() => {
               soundEngine.playTap();
               setGameMode('quest');
             }}
-            className={`px-3 py-1 rounded-full text-xs font-black transition-all ${
+            className={`px-3.5 py-1 rounded-full text-xs font-black transition-all ${
               gameMode === 'quest'
                 ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md'
                 : 'text-purple-300 hover:text-white'
             }`}
           >
-            Reto Ecoico
+            Echo Quest
           </button>
           <button
             onClick={() => {
               soundEngine.playTap();
               setGameMode('jam');
             }}
-            className={`px-3 py-1 rounded-full text-xs font-black transition-all ${
+            className={`px-3.5 py-1 rounded-full text-xs font-black transition-all ${
               gameMode === 'jam'
                 ? 'bg-gradient-to-r from-[#00f2c9] to-cyan-500 text-slate-950 shadow-md'
                 : 'text-purple-300 hover:text-white'
             }`}
           >
-            Modo Jam Libre
+            Free Jam Mode
           </button>
         </div>
 
@@ -377,7 +382,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
           {/* Mic Toggle Button */}
           <button
             onClick={toggleMicrophone}
-            title={isMicEnabled ? 'Micrófono Activado' : 'Activar Micrófono'}
+            title={isMicEnabled ? 'Microphone Active' : 'Activate Microphone'}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border transition-all active:scale-95 ${
               isMicEnabled
                 ? 'bg-emerald-500 text-slate-950 border-white shadow-emerald-500/50 shadow-lg animate-pulse'
@@ -385,7 +390,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
             }`}
           >
             {isMicEnabled ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5 text-purple-400" />}
-            <span className="hidden md:inline">{isMicEnabled ? 'Voz On' : 'Voz Off'}</span>
+            <span className="hidden md:inline">{isMicEnabled ? 'Voice Mic On' : 'Voice Mic Off'}</span>
           </button>
 
           {/* Score Counter */}
@@ -402,7 +407,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
                 ? 'bg-cyan-500 text-slate-950 border-white shadow-md'
                 : 'bg-[#2d004d] text-purple-300 border-purple-500/40 hover:text-white'
             }`}
-            title="Panel RBT"
+            title="RBT Co-Pilot Panel"
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -414,11 +419,11 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
         <div className="bg-[#120022]/95 border-b-2 border-cyan-500/40 px-4 py-2 z-25 flex flex-wrap items-center justify-between gap-3 text-xs shadow-inner">
           <div className="flex items-center gap-4 text-purple-200 font-semibold">
             <span className="font-black text-cyan-300 uppercase tracking-wider text-[11px]">
-              Co-Piloto RBT:
+              RBT Co-Pilot:
             </span>
-            <span>Independientes: <b className="text-emerald-400 text-sm">{independentTries}</b></span>
-            <span>Asistidos: <b className="text-amber-400 text-sm">{promptedTries}</b></span>
-            <span>Racha: <b className="text-yellow-400 text-sm">{streak}</b></span>
+            <span>Independent: <b className="text-emerald-400 text-sm">{independentTries}</b></span>
+            <span>Prompted: <b className="text-amber-400 text-sm">{promptedTries}</b></span>
+            <span>Streak: <b className="text-yellow-400 text-sm">{streak}</b></span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -430,18 +435,18 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
               className="px-3 py-1 bg-purple-800 hover:bg-purple-700 active:scale-95 text-white rounded-lg font-bold flex items-center gap-1 border border-purple-400/40"
             >
               <RotateCcw className="w-3.5 h-3.5 text-cyan-300" />
-              <span>Repetir Modelo</span>
+              <span>Repeat Model</span>
             </button>
 
             <button
               onClick={() => {
-                triggerCelebration('¡GRAN INTENTO VOCAL! ⭐ (RBT)', false);
+                triggerCelebration('GREAT VOCAL TRY! ⭐ (RBT)', false, 'good_try');
                 advanceNextTarget();
               }}
               className="px-3.5 py-1 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 active:scale-95 text-slate-950 rounded-lg font-black flex items-center gap-1 border border-white shadow-md"
             >
               <Award className="w-3.5 h-3.5" />
-              <span>¡Buen Intento! ⭐ (Reforzar)</span>
+              <span>Good Try! ⭐ (Reinforce)</span>
             </button>
           </div>
         </div>
@@ -475,10 +480,10 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
                 </div>
                 <div>
                   <div className="text-[11px] font-black uppercase text-[#00f2c9] tracking-wider">
-                    {isModeling ? 'ESCUCHA Y OBSERVA LA BOCA' : '¡TU TURNO! HAZ EL SONIDO'}
+                    {isModeling ? 'LISTEN & WATCH THE MOUTH' : 'YOUR TURN! MAKE THE SOUND'}
                   </div>
                   <div className="text-white text-sm md:text-base font-black flex items-center gap-1.5">
-                    <span>{currentTarget.name} dice:</span>
+                    <span>{currentTarget.name} models:</span>
                     <span className="text-yellow-300 font-extrabold">{currentTarget.soundLabel}</span>
                   </div>
                   <div className="text-purple-300 text-xs font-semibold">
@@ -493,14 +498,14 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
                   <div className="w-10 h-10 rounded-full border-3 border-amber-400 flex items-center justify-center font-black text-amber-300 text-sm animate-pulse shadow-md">
                     {imitationLatencySeconds}s
                   </div>
-                  <span className="text-[10px] text-purple-300 font-bold uppercase mt-0.5">Tiempo</span>
+                  <span className="text-[10px] text-purple-300 font-bold uppercase mt-0.5">Time</span>
                 </div>
               )}
             </div>
           ) : (
             <div className="bg-[#1b0033]/90 border-2 border-[#00f2c9]/60 rounded-full px-6 py-2 backdrop-blur-md shadow-xl flex items-center gap-3 text-xs md:text-sm font-black text-white">
               <Volume2 className="w-4 h-4 text-[#00f2c9]" />
-              <span>Toca cualquier monstruo para escuchar su sonido o canta al micrófono</span>
+              <span>Tap any musical critter to hear its sound or sing into the microphone!</span>
             </div>
           )}
 
@@ -508,7 +513,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
           {isMicEnabled && (
             <div className="mt-3 flex items-center gap-2 bg-[#120022]/90 border border-emerald-400/40 px-4 py-1.5 rounded-full shadow-md">
               <Mic className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span className="text-[11px] font-bold text-emerald-300 uppercase">Micrófono:</span>
+              <span className="text-[11px] font-bold text-emerald-300 uppercase">Voice Mic:</span>
               <div className="w-28 md:w-36 h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-white/20">
                 <div
                   className="h-full rounded-full transition-all duration-75 bg-gradient-to-r from-emerald-500 via-yellow-400 to-rose-500"
@@ -581,7 +586,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
           {/* Quick Guidance Hint for Therapist or Child */}
           <div className="mt-3 flex items-center gap-1.5 text-purple-300/80 text-xs font-semibold">
             <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Toca el pad grande para modelar o imita con tu voz para ganar estrellas</span>
+            <span>Tap the large pads to model or make the sound with your voice to jam!</span>
           </div>
         </div>
       </div>

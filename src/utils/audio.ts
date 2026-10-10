@@ -537,62 +537,67 @@ class SoundEngine {
     }
   }
 
-  // Vowel synthesis for Echo Beats (A, E, O) with warm musical harmonics + Speech synthesis
+  // Pristine AvaNeural speech playback for Echo Beats (A, E, O)
   public playVowelSound(vowel: 'a' | 'e' | 'o') {
     if (this.isMuted) return;
+    this.stopAac();
+
     try {
-      this.initContext();
-      if (!this.ctx) return;
-
-      const now = this.ctx.currentTime;
-      // Fundamental pitch per critter
-      const fundFreq = vowel === 'a' ? 261.63 : vowel === 'e' ? 329.63 : 196.00; // C4, E4, G3
-      
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(fundFreq, now);
-      osc.frequency.linearRampToValueAtTime(fundFreq * 1.05, now + 0.3);
-      osc.frequency.linearRampToValueAtTime(fundFreq, now + 0.6);
-
-      // Acoustic vowel formant filters
-      const f1 = this.ctx.createBiquadFilter();
-      f1.type = 'bandpass';
-      f1.frequency.value = vowel === 'a' ? 800 : vowel === 'e' ? 450 : 400;
-      f1.Q.value = 3.5;
-
-      const f2 = this.ctx.createBiquadFilter();
-      f2.type = 'bandpass';
-      f2.frequency.value = vowel === 'a' ? 1200 : vowel === 'e' ? 2100 : 800;
-      f2.Q.value = 4.0;
-
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.35, now + 0.08);
-      gain.gain.setValueAtTime(0.32, now + 0.45);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-
-      osc.connect(f1);
-      osc.connect(f2);
-      f1.connect(gain);
-      f2.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.7);
-
-      // Natural speech vocalization
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const text = vowel === 'a' ? '¡Aaaaa!' : vowel === 'e' ? '¡Eeeee!' : '¡Ooooo!';
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.85;
-        utterance.pitch = vowel === 'a' ? 1.1 : vowel === 'e' ? 1.3 : 0.95;
-        utterance.lang = 'es-ES';
-        window.speechSynthesis.speak(utterance);
-      }
+      const audio = new Audio(`/audio/echo/vowel_${vowel}.mp3`);
+      audio.volume = 0.95;
+      this.currentAacAudio = audio;
+      audio.onended = () => {
+        if (this.currentAacAudio === audio) {
+          this.currentAacAudio = null;
+        }
+      };
+      audio.play().catch(() => {
+        this.fallbackWebSpeech(vowel.toUpperCase());
+      });
     } catch {
-      // Silent fallback
+      this.fallbackWebSpeech(vowel.toUpperCase());
+    }
+  }
+
+  // Model prompt with AvaNeural ("Make the sound: A!")
+  public playEchoModel(vowel: 'a' | 'e' | 'o') {
+    if (this.isMuted) return;
+    this.stopAac();
+
+    try {
+      const audio = new Audio(`/audio/echo/model_${vowel}.mp3`);
+      audio.volume = 0.95;
+      this.currentAacAudio = audio;
+      audio.onended = () => {
+        if (this.currentAacAudio === audio) {
+          this.currentAacAudio = null;
+        }
+      };
+      audio.play().catch(() => {
+        this.fallbackWebSpeech(`Make the sound ${vowel.toUpperCase()}`);
+      });
+    } catch {
+      this.fallbackWebSpeech(`Make the sound ${vowel.toUpperCase()}`);
+    }
+  }
+
+  // Celebratory speech praise with AvaNeural
+  public playEchoPraise(type: 'heard_you' | 'great_job' | 'good_try') {
+    if (this.isMuted) return;
+    this.stopAac();
+
+    try {
+      const audio = new Audio(`/audio/echo/${type}.mp3`);
+      audio.volume = 0.95;
+      this.currentAacAudio = audio;
+      audio.onended = () => {
+        if (this.currentAacAudio === audio) {
+          this.currentAacAudio = null;
+        }
+      };
+      audio.play().catch(() => {});
+    } catch {
+      // Silent
     }
   }
 

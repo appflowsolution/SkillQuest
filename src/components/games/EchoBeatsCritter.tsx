@@ -220,7 +220,7 @@ export const EchoBeatsCritter: React.FC<EchoBeatsCritterProps> = ({
         >
           <span className="text-xl md:text-2xl font-black">{vowel.toUpperCase()}</span>
           <span className="text-xs opacity-80">
-            {vowel === 'a' ? '¡AAA!' : vowel === 'e' ? '¡EEE!' : '¡OOO!'}
+            {vowel === 'a' ? 'A!' : vowel === 'e' ? 'E!' : 'O!'}
           </span>
         </div>
         <span className="text-white/80 font-bold text-xs mt-0.5">
