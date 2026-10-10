@@ -299,19 +299,19 @@ export const AacIconGlyph: React.FC<AacIconGlyphProps> = ({ symbolId, size = 48,
 
 // Map of AAC symbol IDs to their high-resolution 3D Pixar-style flashcard illustrations
 export const AAC_IMAGE_CARDS: Record<AacSymbolId, string> = {
-  want: '/cards/aac/want.jpg',
-  go: '/cards/aac/go.jpg',
-  open: '/cards/aac/open.jpg',
-  play: '/cards/aac/play.jpg',
-  look: '/cards/aac/look.jpg',
-  help: '/cards/aac/help.jpg',
-  stop: '/cards/aac/stop.jpg',
-  more: '/cards/aac/more.jpg',
-  please: '/cards/aac/please.jpg',
-  star: '/cards/aac/star.jpg',
-  crystal: '/cards/aac/crystal.jpg',
-  bridge: '/cards/aac/bridge.jpg',
-  gate: '/cards/aac/open.jpg',
+  want: '/cards/aac/want.webp',
+  go: '/cards/aac/go.webp',
+  open: '/cards/aac/open.webp',
+  play: '/cards/aac/play.webp',
+  look: '/cards/aac/look.webp',
+  help: '/cards/aac/help.webp',
+  stop: '/cards/aac/stop.webp',
+  more: '/cards/aac/more.webp',
+  please: '/cards/aac/please.webp',
+  star: '/cards/aac/star.webp',
+  crystal: '/cards/aac/crystal.webp',
+  bridge: '/cards/aac/bridge.webp',
+  gate: '/cards/aac/open.webp',
 };
 
 interface AacCardImageProps {

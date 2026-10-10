@@ -8,13 +8,13 @@ interface GameCardIllustrationProps {
 
 // Map of game IDs to their authentic 4:3 ABCya-style cover illustrations (with cache-buster v=2)
 const COVER_IMAGES: Record<string, string> = {
-  'break-request': '/covers/break-request.jpg?v=3',
-  'more-time': '/covers/more-time.jpg?v=3',
-  'turn-taking': '/covers/turn-taking.jpg?v=3',
-  'aac-trainer': '/covers/aac-trainer.jpg?v=3',
-  'request-help': '/covers/request-help.jpg?v=5',
-  'echoic-lab': '/covers/echoic-lab.jpg?v=3',
-  'echo-lab': '/covers/echoic-lab.jpg?v=3',
+  'break-request': '/covers/break-request.webp?v=4',
+  'more-time': '/covers/more-time.webp?v=4',
+  'turn-taking': '/covers/turn-taking.webp?v=4',
+  'aac-trainer': '/covers/aac-trainer.webp?v=4',
+  'request-help': '/covers/request-help.webp?v=6',
+  'echoic-lab': '/covers/echoic-lab.webp?v=4',
+  'echo-lab': '/covers/echoic-lab.webp?v=4',
 };
 
 export const GameCardIllustration: FC<GameCardIllustrationProps> = ({ gameId }) => {
