@@ -6,6 +6,7 @@ import { TimeWarpGame } from './components/games/TimeWarpGame';
 import { ChromaCrittersGame } from './components/games/ChromaCrittersGame';
 import { StarTowerGame } from './components/games/StarTowerGame';
 import { IconQuestGame } from './components/games/IconQuestGame';
+import { EchoBeatsGame } from './components/games/EchoBeatsGame';
 import { GameId } from './types';
 import { GAMES_CATALOG } from './data/games';
 import { soundEngine } from './utils/audio';
@@ -62,6 +63,8 @@ export function App() {
         <StarTowerGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : activeGameId === 'aac-trainer' ? (
         <IconQuestGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
+      ) : activeGameId === 'echoic-lab' ? (
+        <EchoBeatsGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-slate-400">Module in development</p>
