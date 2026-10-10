@@ -393,7 +393,6 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     setRelicsCount(0);
     setIsEraWon(false);
     setIsTransitionComplete(false);
-    setIsStarted(false);
     setTrackItems([]);
     setPlayerLane(1);
     totalMetersTraveledRef.current = 0;
@@ -409,7 +408,6 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     setRelicsCount(0);
     setIsTransitionComplete(false);
     setIsEraWon(false);
-    setIsStarted(false);
     setTrackItems([]);
     setPlayerLane(1);
     totalMetersTraveledRef.current = 0;
