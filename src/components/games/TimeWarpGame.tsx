@@ -188,8 +188,8 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
       const delta = (timestamp - lastTimestamp) / 1000;
       lastTimestamp = timestamp;
 
-      // Speed in meters per second (boosted by 80% when time extended)
-      const speed = speedBoost ? currentEra.runnerSpeed * 1.8 : currentEra.runnerSpeed;
+      // Speed in meters per second
+      const speed = currentEra.runnerSpeed;
       
       setDistanceRemaining(prev => {
         const nextDist = Math.max(0, prev - speed * delta);
@@ -212,9 +212,9 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
         return nextDist;
       });
 
-      // Update track items downward movement & perform collision detection directly at 60 FPS
+      // Update track items downward movement at comfortable era speed & perform collision detection directly at 60 FPS
       setTrackItems(prevItems => {
-        const itemSpeed = speedBoost ? currentEra.itemSpeed * 1.5 : currentEra.itemSpeed;
+        const itemSpeed = currentEra.itemSpeed;
         let scoreGain = 0;
         let relicsGained = 0;
         const currentLane = playerLaneRef.current;
@@ -688,7 +688,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
           <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-500 via-[#00f2c9] to-teal-500 text-slate-950 font-black px-6 py-2 rounded-full shadow-2xl border-2 border-white flex items-center gap-2 animate-bounce z-40">
             <PlusCircle className="w-5 h-5 fill-slate-950 text-white" />
             <span className="text-xs md:text-sm uppercase tracking-wider">
-              SUCCESSFUL REQUEST! +15 SECONDS & HYPERSPEED!
+              SUCCESSFUL REQUEST! +15 SECONDS TO EXPLORE!
             </span>
           </div>
         )}
