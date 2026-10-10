@@ -380,6 +380,112 @@ class SoundEngine {
       // Silencioso
     }
   }
+
+  // Sonido nítido táctil de comunicador AAC
+  public playAacTap() {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(780, this.ctx.currentTime + 0.08);
+
+      gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.08);
+    } catch {
+      // Silencioso
+    }
+  }
+
+  // Sonido de la chispa guía (magical guide spark shimmer)
+  public playGuideSpark() {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const freqs = [659.25, 830.61, 987.77, 1318.51]; // E5 -> G#5 -> B5 -> E6
+      freqs.forEach((f, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+
+        osc.type = 'sine';
+        const start = this.ctx!.currentTime + idx * 0.05;
+        osc.frequency.setValueAtTime(f, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.12, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.ctx!.destination);
+
+        osc.start(start);
+        osc.stop(start + 0.18);
+      });
+    } catch {
+      // Silencioso
+    }
+  }
+
+  // Éxito de frase AAC completada (triunfal)
+  public playAacPhraseSuccess() {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const chord = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      chord.forEach((f, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+
+        osc.type = 'triangle';
+        const start = this.ctx!.currentTime + idx * 0.07;
+        osc.frequency.setValueAtTime(f, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.2, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx!.destination);
+
+        osc.start(start);
+        osc.stop(start + 0.35);
+      });
+    } catch {
+      // Silencioso
+    }
+  }
+
+  // Salida de voz AAC real (Web Speech API)
+  public speakAac(text: string) {
+    if (this.isMuted) return;
+    try {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.pitch = 1.1; // Friendly warm speech synthesizer pitch
+        utterance.lang = 'en-US';
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch {
+      // Silencioso
+    }
+  }
 }
 
 export const soundEngine = new SoundEngine();

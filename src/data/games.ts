@@ -51,7 +51,7 @@ export const GAMES_CATALOG: GameMetadata[] = [
     genre: 'Puzzle World',
     ribbon: 'MISSION 4',
     ribbonColor: 'bg-amber-500 text-white',
-    isAvailable: false,
+    isAvailable: true,
     skillName: 'Accepting Guidance on AAC Devices',
     skillCode: 'Skill 10',
     skillDescription: 'Allowing hand-over-hand or physical prompts toward icons on a speech-generating device without hand withdrawal or resistance.',
