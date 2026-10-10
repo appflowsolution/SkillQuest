@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import { soundEngine } from '../../utils/audio';
 import { CosmicBackground } from '../CosmicBackground';
 import { TimeItemIcon, TimeItemType } from './TimeItemIcon';
+import { TimeWarpHero } from './TimeWarpHero';
 import { 
   Clock, 
   ArrowLeft, 
@@ -45,6 +46,8 @@ interface EraConfig {
   bgGradient: string;
   horizonColor: string;
   targetRelics: number;
+  targetItemType: TimeItemType;
+  targetItemName: string;
   baseTime: number;
   baseDistance: number;
   itemSpeed: number;
@@ -59,48 +62,56 @@ const ERAS: EraConfig[] = [
     bgGradient: 'from-[#002f3c] via-[#004758] to-[#001f28]',
     horizonColor: '#f59e0b',
     targetRelics: 4,
-    baseTime: 18,
-    baseDistance: 120,
+    targetItemType: 'hourglass',
+    targetItemName: 'Hourglasses',
+    baseTime: 25,
+    baseDistance: 110,
     itemSpeed: 38,
     runnerSpeed: 6.5,
-    anomalyChance: 0.20,
-    spawnDistanceInterval: 8,
+    anomalyChance: 0.15,
+    spawnDistanceInterval: 4.2,
   },
   {
     name: 'Clockwork Realm',
     bgGradient: 'from-[#002833] via-[#003847] to-[#001d24]',
     horizonColor: '#00f2c9',
     targetRelics: 6,
-    baseTime: 17,
-    baseDistance: 140,
-    itemSpeed: 48,
-    runnerSpeed: 7.2,
-    anomalyChance: 0.28,
-    spawnDistanceInterval: 7,
+    targetItemType: 'gear',
+    targetItemName: 'Chrono Gears',
+    baseTime: 28,
+    baseDistance: 130,
+    itemSpeed: 44,
+    runnerSpeed: 7.0,
+    anomalyChance: 0.18,
+    spawnDistanceInterval: 4.0,
   },
   {
     name: 'Chrono Galaxy',
     bgGradient: 'from-[#1e1b4b] via-[#002f3c] to-[#00171f]',
     horizonColor: '#38bdf8',
-    targetRelics: 8,
-    baseTime: 16,
-    baseDistance: 160,
-    itemSpeed: 58,
-    runnerSpeed: 8.0,
-    anomalyChance: 0.35,
-    spawnDistanceInterval: 6.5,
+    targetRelics: 7,
+    targetItemType: 'chronosphere',
+    targetItemName: 'Chronospheres',
+    baseTime: 30,
+    baseDistance: 150,
+    itemSpeed: 50,
+    runnerSpeed: 7.5,
+    anomalyChance: 0.20,
+    spawnDistanceInterval: 3.8,
   },
   {
     name: 'Atlantis Vortex',
     bgGradient: 'from-[#002633] via-[#004052] to-[#001a24]',
     horizonColor: '#4ade80',
-    targetRelics: 10,
-    baseTime: 15,
-    baseDistance: 180,
-    itemSpeed: 68,
-    runnerSpeed: 8.8,
-    anomalyChance: 0.42,
-    spawnDistanceInterval: 6,
+    targetRelics: 8,
+    targetItemType: 'compass',
+    targetItemName: 'Astral Compasses',
+    baseTime: 32,
+    baseDistance: 170,
+    itemSpeed: 56,
+    runnerSpeed: 8.0,
+    anomalyChance: 0.22,
+    spawnDistanceInterval: 3.6,
   },
 ];
 
@@ -150,7 +161,8 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
   // Track entities
   const [trackItems, setTrackItems] = useState<TrackItem[]>([]);
   const nextItemIdRef = useRef(1);
-  const lastSpawnDistanceRef = useRef(currentEra.baseDistance);
+  const totalMetersTraveledRef = useRef(0);
+  const lastSpawnMetersRef = useRef(-2); // Pre-trigger so first item spawns immediately
 
   const isTimeCritical = secondsRemaining <= 7;
   const isPortalCharged = relicsCount >= currentEra.targetRelics;
@@ -177,7 +189,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [moveLeft, moveRight, isEraWon, isTransitionComplete]);
 
-  // Main Runner Animation Loop (60 FPS) with integrated continuous Collision Detection
+  // Main Runner Animation Loop (60 FPS) with integrated continuous Collision Detection & Monotonic Spawning
   useEffect(() => {
     if (isEraWon || isTransitionComplete) return;
 
@@ -189,10 +201,19 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
       lastTimestamp = timestamp;
 
       // Speed in meters per second
-      const speed = currentEra.runnerSpeed;
+      const speed = currentEra.runnerSpeed * (speedBoost ? 1.3 : 1.0);
+      const metersThisFrame = speed * delta;
+      totalMetersTraveledRef.current += metersThisFrame;
+
+      // Monotonic spawn check — immune to distance countdown resets
+      let shouldSpawn = false;
+      if (totalMetersTraveledRef.current - lastSpawnMetersRef.current >= currentEra.spawnDistanceInterval) {
+        lastSpawnMetersRef.current = totalMetersTraveledRef.current;
+        shouldSpawn = true;
+      }
       
       setDistanceRemaining(prev => {
-        const nextDist = Math.max(0, prev - speed * delta);
+        const nextDist = Math.max(0, prev - metersThisFrame);
         if (nextDist <= 0) {
           // If child gathered enough relics, VICTORY!
           if (relicsCountRef.current >= currentEra.targetRelics && !isEraWon) {
@@ -206,7 +227,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
             // Needs more relics to unlock portal! Extend distance loop so child keeps running
             setNeedMoreRelicsWarning(true);
             setTimeout(() => setNeedMoreRelicsWarning(false), 2200);
-            return 35;
+            return 40;
           }
         }
         return nextDist;
@@ -214,7 +235,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
 
       // Update track items downward movement at comfortable era speed & perform collision detection directly at 60 FPS
       setTrackItems(prevItems => {
-        const itemSpeed = currentEra.itemSpeed;
+        const itemSpeed = currentEra.itemSpeed * (speedBoost ? 1.25 : 1.0);
         let scoreGain = 0;
         let relicsGained = 0;
         const currentLane = playerLaneRef.current;
@@ -226,10 +247,17 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
             // Player hitbox is around Y: 68% to 88%
             if (!item.collected && item.lane === currentLane && nextY >= 68 && nextY <= 88) {
               if (item.type === 'collectible') {
-                scoreGain += 25;
-                relicsGained += 1;
-                soundEngine.playGemPop();
-                triggerFeedback('+25 ⭐', currentLane, 'collect');
+                const isTargetRelic = item.itemType === currentEra.targetItemType;
+                if (isTargetRelic) {
+                  scoreGain += 50;
+                  relicsGained += 1;
+                  soundEngine.playGemPop();
+                  triggerFeedback('+50 ⭐ Relic!', currentLane, 'collect');
+                } else {
+                  scoreGain += 25;
+                  soundEngine.playGemPop();
+                  triggerFeedback('+25 ⭐ Bonus', currentLane, 'collect');
+                }
                 return { ...item, y: nextY, collected: true };
               } else {
                 soundEngine.playGlitch();
@@ -244,18 +272,45 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
           })
           .filter(item => item.y < 110); // Remove past screen
 
+        // Spawn new item at top horizon if interval reached
+        if (shouldSpawn) {
+          const randomLane = Math.floor(Math.random() * 3);
+          const isAnomaly = Math.random() < currentEra.anomalyChance;
+          // 85% chance for target relic so the requested items are plentiful!
+          const isTarget = Math.random() < 0.85;
+
+          const otherTypes: TimeItemType[] = (['hourglass', 'gear', 'chronosphere', 'compass', 'pocket-watch'] as TimeItemType[])
+            .filter(t => t !== currentEra.targetItemType);
+          const chosenType = isTarget 
+            ? currentEra.targetItemType 
+            : otherTypes[Math.floor(Math.random() * otherTypes.length)];
+
+          const newItem: TrackItem = {
+            id: nextItemIdRef.current++,
+            lane: randomLane,
+            y: 0,
+            type: isAnomaly ? 'anomaly' : 'collectible',
+            itemType: isAnomaly ? undefined : chosenType,
+            label: isAnomaly ? 'Time Glitch' : currentEra.targetItemName,
+            collected: false,
+          };
+          updated.push(newItem);
+        }
+
         if (scoreGain > 0) {
           setScore(s => s + scoreGain);
-          setRelicsCount(prev => {
-            const nextRelics = Math.min(currentEra.targetRelics, prev + relicsGained);
-            if (nextRelics >= currentEra.targetRelics && prev < currentEra.targetRelics) {
-              soundEngine.playSuccess();
-              try {
-                confetti({ particleCount: 60, spread: 80, origin: { y: 0.4 } });
-              } catch { /* ignore */ }
-            }
-            return nextRelics;
-          });
+          if (relicsGained > 0) {
+            setRelicsCount(prev => {
+              const nextRelics = Math.min(currentEra.targetRelics, prev + relicsGained);
+              if (nextRelics >= currentEra.targetRelics && prev < currentEra.targetRelics) {
+                soundEngine.playSuccess();
+                try {
+                  confetti({ particleCount: 60, spread: 80, origin: { y: 0.4 } });
+                } catch { /* ignore */ }
+              }
+              return nextRelics;
+            });
+          }
         }
 
         return updated;
@@ -267,33 +322,6 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     animationFrameId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationFrameId);
   }, [isEraWon, isTransitionComplete, speedBoost, triggerFeedback, currentEra]);
-
-  // Item Spawning based on distance traveled (scaled by era)
-  useEffect(() => {
-    if (isEraWon || isTransitionComplete) return;
-
-    if (lastSpawnDistanceRef.current - distanceRemaining > currentEra.spawnDistanceInterval) {
-      lastSpawnDistanceRef.current = distanceRemaining;
-
-      const randomLane = Math.floor(Math.random() * 3);
-      const isAnomaly = Math.random() < currentEra.anomalyChance;
-
-      const collectibleTypes: TimeItemType[] = ['hourglass', 'pocket-watch', 'gear', 'compass', 'chronosphere'];
-      const chosenType = collectibleTypes[Math.floor(Math.random() * collectibleTypes.length)];
-
-      const newItem: TrackItem = {
-        id: nextItemIdRef.current++,
-        lane: randomLane,
-        y: 5,
-        type: isAnomaly ? 'anomaly' : 'collectible',
-        itemType: isAnomaly ? undefined : chosenType,
-        label: isAnomaly ? 'Time Glitch' : 'Temporal Artifact',
-        collected: false,
-      };
-
-      setTrackItems(prev => [...prev, newItem]);
-    }
-  }, [distanceRemaining, isEraWon, isTransitionComplete, currentEra]);
 
   // Countdown Portal Timer (Skill 9 Establishing Operation)
   useEffect(() => {
@@ -326,7 +354,8 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     if (extensionsLeft <= 0) return;
 
     soundEngine.playTimeExtension();
-    setSecondsRemaining(prev => prev + 15);
+    setSecondsRemaining(prev => prev + 30);
+    setDistanceRemaining(prev => prev + 45);
     setExtensionsLeft(prev => prev - 1);
     setPromptActive(false);
     setIsTimeExtendedBanner(true);
@@ -362,7 +391,8 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     setIsTransitionComplete(false);
     setTrackItems([]);
     setPlayerLane(1);
-    lastSpawnDistanceRef.current = nextEra.baseDistance;
+    totalMetersTraveledRef.current = 0;
+    lastSpawnMetersRef.current = -2;
   };
 
   // Retry same era after transition wrap-up
@@ -376,7 +406,8 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     setIsEraWon(false);
     setTrackItems([]);
     setPlayerLane(1);
-    lastSpawnDistanceRef.current = currentEra.baseDistance;
+    totalMetersTraveledRef.current = 0;
+    lastSpawnMetersRef.current = -2;
   };
 
   const timePercentage = Math.max(0, Math.min(100, (secondsRemaining / currentEra.baseTime) * 100));
@@ -405,14 +436,18 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
           </div>
 
           {/* TARGET MISSION COUNTER */}
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${
+          <div className={`flex items-center gap-2 px-3.5 py-1 rounded-full border transition-all ${
             isPortalCharged 
               ? 'bg-emerald-950/90 border-emerald-400 text-emerald-300 shadow-md shadow-emerald-500/30 animate-pulse'
               : 'bg-[#002833] border-amber-400/60 text-white shadow-sm'
           }`}>
-            <Clock className={`w-3.5 h-3.5 ${isPortalCharged ? 'text-emerald-400' : 'text-amber-400'}`} />
-            <span className="text-xs font-black">
-              Relics: <span className={isPortalCharged ? 'text-emerald-300 font-extrabold' : 'text-amber-300 font-bold'}>{relicsCount}/{currentEra.targetRelics}</span>
+            <div className="w-5 h-5 flex items-center justify-center shrink-0">
+              <TimeItemIcon type={currentEra.targetItemType} />
+            </div>
+            <span className="text-xs md:text-sm font-black flex items-center gap-1.5">
+              <span className={isPortalCharged ? 'text-emerald-300 font-black' : 'text-amber-300 font-black'}>
+                {relicsCount}/{currentEra.targetRelics}
+              </span>
             </span>
           </div>
 
@@ -495,33 +530,44 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
         </div>
 
         {/* DYNAMIC STATUS / OBJECTIVE BANNER */}
-        <div className="absolute top-2 inset-x-0 mx-auto max-w-sm md:max-w-md z-25 flex items-center justify-center pointer-events-none px-4">
+        <div className="absolute top-2 inset-x-0 mx-auto max-w-md md:max-w-xl lg:max-w-2xl z-25 flex items-center justify-center pointer-events-none px-4 w-full">
           {needMoreRelicsWarning ? (
-            <div className="bg-amber-500 text-slate-950 border-2 border-white rounded-full px-5 py-1.5 shadow-2xl flex items-center gap-2 text-xs font-black animate-bounce">
-              <ShieldAlert className="w-4 h-4 text-slate-950" />
-              <span>PORTAL LOCKED: Collect {currentEra.targetRelics - relicsCount} more relics!</span>
+            <div className="bg-amber-500 text-slate-950 border-2 border-white rounded-full px-5 py-2 shadow-2xl flex items-center gap-2.5 text-xs md:text-sm font-black animate-bounce">
+              <ShieldAlert className="w-5 h-5 text-slate-950 shrink-0" />
+              <span>PORTAL LOCKED: Collect</span>
+              <div className="w-5 h-5 shrink-0 inline-flex items-center justify-center">
+                <TimeItemIcon type={currentEra.targetItemType} />
+              </div>
+              <span>x {currentEra.targetRelics - relicsCount} more!</span>
             </div>
           ) : isPortalCharged ? (
-            <div className="bg-gradient-to-r from-emerald-500 to-[#00f2c9] text-slate-950 border-2 border-white rounded-full px-5 py-1.5 shadow-2xl flex items-center gap-2 text-xs font-black animate-pulse">
-              <Sparkles className="w-4 h-4 fill-slate-950" />
+            <div className="bg-gradient-to-r from-emerald-500 to-[#00f2c9] text-slate-950 border-2 border-white rounded-full px-6 py-2 shadow-2xl flex items-center gap-2.5 text-xs md:text-sm font-black animate-pulse">
+              <Sparkles className="w-5 h-5 fill-slate-950 shrink-0" />
               <span>PORTAL FULLY CHARGED! REACH THE GATE!</span>
             </div>
           ) : isTimeCritical && extensionsLeft > 0 ? (
-            <div className="bg-rose-600 text-white border-2 border-yellow-300 rounded-full px-5 py-1.5 shadow-2xl flex items-center gap-2 text-xs font-black animate-bounce">
-              <Timer className="w-4 h-4 text-yellow-300 animate-spin" />
+            <div className="bg-rose-600 text-white border-2 border-yellow-300 rounded-full px-6 py-2 shadow-2xl flex items-center gap-2.5 text-xs md:text-sm font-black animate-bounce">
+              <Timer className="w-5 h-5 text-yellow-300 animate-spin shrink-0" />
               <span>⚠️ PORTAL CLOSING IN {secondsRemaining}s! TAP [+1 MORE MINUTE]!</span>
             </div>
           ) : (
-            <div className="bg-[#002029]/95 border-2 border-[#00c9a7]/60 rounded-full px-4 py-1.5 backdrop-blur-md shadow-xl flex items-center gap-3 text-[11px] md:text-xs font-black text-white">
-              <span className="text-amber-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>CATCH: {currentEra.targetRelics} Relics (+25 ⭐)</span>
-              </span>
+            <div className="bg-[#002029]/95 border-2 border-[#00c9a7]/60 rounded-full px-5 py-2 backdrop-blur-md shadow-xl flex items-center justify-center gap-3 md:gap-5 text-xs md:text-sm font-black text-white w-auto max-w-full">
+              <div className="text-amber-300 flex items-center gap-2">
+                <span className="text-[#00f2c9] uppercase tracking-wider text-[10px] md:text-xs">CATCH:</span>
+                <div className="w-7 h-7 md:w-8 md:h-8 bg-[#00171f] p-1 rounded-full border-2 border-amber-400 shadow flex items-center justify-center shrink-0">
+                  <TimeItemIcon type={currentEra.targetItemType} />
+                </div>
+                <span className="font-extrabold text-sm md:text-base text-amber-300">x {currentEra.targetRelics}</span>
+                <span className="text-xs text-amber-200/80 font-bold hidden sm:inline">(+50 ⭐)</span>
+              </div>
               <span className="text-white/30">•</span>
-              <span className="text-fuchsia-300 flex items-center gap-1.5">
-                <ShieldAlert className="w-3.5 h-3.5 text-fuchsia-400" />
-                <span>DODGE: Glitches</span>
-              </span>
+              <div className="text-fuchsia-300 flex items-center gap-2">
+                <span className="text-rose-400 uppercase tracking-wider text-[10px] md:text-xs">DODGE:</span>
+                <div className="w-6 h-6 md:w-7 md:h-7 bg-[#1e052c] p-1 rounded-full border border-fuchsia-400 shadow flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-4 h-4 text-fuchsia-400" />
+                </div>
+                <span className="text-xs text-fuchsia-200/80 hidden sm:inline">Glitches</span>
+              </div>
             </div>
           )}
         </div>
@@ -629,57 +675,16 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
             );
           })}
 
-          {/* PLAYER SPRITE (THE TIME-TRAVELER EXPLORER) */}
+          {/* PLAYER SPRITE (THE TIME-TRAVELER EXPLORER - MATCHES COVER ART) */}
           <div
             style={{
               left: playerLane === 0 ? '16.6%' : playerLane === 1 ? '50%' : '83.3%',
-              bottom: '12%',
+              bottom: '10%',
               transform: 'translate(-50%, 0)',
             }}
             className="absolute z-20 pointer-events-none transition-all duration-200 ease-out flex flex-col items-center"
           >
-            {/* Speed Boost Trail */}
-            {speedBoost && (
-              <div className="absolute -bottom-6 w-16 h-10 bg-gradient-to-t from-transparent via-cyan-400/40 to-yellow-300/80 rounded-full blur-md animate-pulse"></div>
-            )}
-
-            {/* Explorer Vector Character */}
-            <div className={`w-20 h-22 md:w-24 md:h-26 relative flex items-center justify-center ${speedBoost ? 'scale-110' : ''}`}>
-              <svg viewBox="0 0 100 110" className="w-full h-full drop-shadow-[0_8px_12px_rgba(0,0,0,0.6)]" fill="none">
-                {/* Wind Scarf Flutter */}
-                <path d="M42,52 Q22,50 14,38 Q18,62 38,58" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" className="animate-pulse" />
-                <path d="M58,52 Q78,50 86,38 Q82,62 62,58" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" className="animate-pulse" />
-
-                {/* Explorer Flight Jacket Body */}
-                <path d="M36,54 L64,54 L68,84 L32,84 Z" fill="#854d0e" stroke="#ffffff" strokeWidth="3" strokeLinejoin="round" />
-                <rect x="42" y="56" width="16" height="28" fill="#38bdf8" />
-                <line x1="50" y1="56" x2="50" y2="84" stroke="#ffffff" strokeWidth="2" />
-
-                {/* Animated Running Legs */}
-                <rect x="34" y="84" width="10" height="18" rx="5" fill="#334155" stroke="#ffffff" strokeWidth="2" />
-                <rect x="56" y="84" width="10" height="18" rx="5" fill="#334155" stroke="#ffffff" strokeWidth="2" />
-                <ellipse cx="39" cy="102" rx="7" ry="4" fill="#f59e0b" />
-                <ellipse cx="61" cy="102" rx="7" ry="4" fill="#f59e0b" />
-
-                {/* Explorer Head */}
-                <circle cx="50" cy="36" r="20" fill="#fed7aa" stroke="#ffffff" strokeWidth="3" />
-                
-                {/* Steampunk Aviator Goggles */}
-                <rect x="30" y="28" width="40" height="12" rx="6" fill="#78350f" stroke="#ffffff" strokeWidth="2" />
-                <circle cx="40" cy="34" r="7" fill="#38bdf8" stroke="#f59e0b" strokeWidth="2.5" />
-                <circle cx="60" cy="34" r="7" fill="#38bdf8" stroke="#f59e0b" strokeWidth="2.5" />
-                <circle cx="38" cy="32" r="2" fill="#ffffff" />
-                <circle cx="58" cy="32" r="2" fill="#ffffff" />
-
-                {/* Cheerful Smile */}
-                <path d="M44,45 Q50,50 56,45" stroke="#78350f" strokeWidth="2.5" strokeLinecap="round" />
-                <circle cx="38" cy="42" r="2" fill="#f43f5e" opacity="0.6" />
-                <circle cx="62" cy="42" r="2" fill="#f43f5e" opacity="0.6" />
-
-                {/* Aviator Helmet Cap */}
-                <path d="M30,32 C30,16 70,16 70,32 Z" fill="#b45309" stroke="#ffffff" strokeWidth="2.5" />
-              </svg>
-            </div>
+            <TimeWarpHero lane={playerLane} speedBoost={speedBoost} />
           </div>
         </div>
 
@@ -688,7 +693,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
           <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-500 via-[#00f2c9] to-teal-500 text-slate-950 font-black px-6 py-2 rounded-full shadow-2xl border-2 border-white flex items-center gap-2 animate-bounce z-40">
             <PlusCircle className="w-5 h-5 fill-slate-950 text-white" />
             <span className="text-xs md:text-sm uppercase tracking-wider">
-              SUCCESSFUL REQUEST! +15 SECONDS TO EXPLORE!
+              SUCCESSFUL REQUEST! +30 SECONDS TO EXPLORE!
             </span>
           </div>
         )}
