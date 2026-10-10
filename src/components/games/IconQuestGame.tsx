@@ -550,7 +550,7 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
       <CosmicBackground />
 
       {/* TOP HUD: Missions, Quest Number, Score & RBT Guidance Mode */}
-      <div className="bg-[#003d4c] border-b-2 border-[#00576b] px-3 md:px-6 py-2.5 flex items-center justify-between shrink-0 z-30 shadow-md gap-3">
+      <div className="bg-[#003d4c] border-b-2 border-[#00576b] px-3 md:px-6 py-1.5 flex items-center justify-between shrink-0 z-30 shadow-md gap-3">
         {/* Left: Exit & Location */}
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
@@ -642,9 +642,9 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
       </div>
 
       {/* STREAMLINED GOAL PHRASE HEADER (COMPACT FOR IPAD FULL-GRID VIEW) */}
-      <div className="w-full bg-[#00171f]/95 border-b-2 border-[#00576b]/70 py-1.5 px-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 z-20 shadow-lg">
+      <div className="w-full bg-[#00171f]/95 border-b-2 border-[#00576b]/70 py-1 px-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 z-20 shadow-lg">
         {/* Central Goal Phrase Pill */}
-        <div className="inline-flex items-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-1.5 bg-gradient-to-r from-[#001f28] via-[#002833] to-[#001f28] border-2 border-[#00f2c9] rounded-2xl shadow-[0_0_15px_rgba(0,242,201,0.25)] shrink-0">
+        <div className="inline-flex items-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-1 bg-gradient-to-r from-[#001f28] via-[#002833] to-[#001f28] border-2 border-[#00f2c9] rounded-2xl shadow-[0_0_15px_rgba(0,242,201,0.25)] shrink-0">
           <span className="text-[11px] font-black text-[#00f2c9] uppercase tracking-wider hidden sm:inline">
             Goal Phrase:
           </span>
@@ -696,9 +696,9 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
       </div>
 
       {/* LOWER HALF: THE AAC COMMUNICATOR TABLET (SGD) */}
-      <div className="flex-1 min-h-0 flex flex-col justify-between p-2 md:p-3 max-w-4xl mx-auto w-full z-20 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col justify-between p-1.5 md:p-2 max-w-4xl mx-auto w-full z-20 overflow-hidden">
         {/* SENTENCE STRIP BAR */}
-        <div className="bg-[#001f28] border-2 border-[#00576b] rounded-2xl p-2 md:p-2.5 shadow-xl flex items-center justify-between gap-2 shrink-0 mb-2">
+        <div className="bg-[#001f28] border-2 border-[#00576b] rounded-2xl p-1.5 md:p-2 shadow-xl flex items-center justify-between gap-2 shrink-0 mb-1.5">
           {/* Sentence Icons Display */}
           <div className="flex-1 flex items-center gap-2 overflow-x-auto min-h-12 px-2 bg-[#001219] rounded-xl border border-white/10">
             {sentenceStrip.length === 0 ? (
@@ -753,7 +753,7 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
         </div>
 
         {/* THE AAC COMMUNICATOR GRID (3 rows x 4 columns) */}
-        <div className="flex-1 grid grid-cols-4 grid-rows-3 gap-2 md:gap-3 p-1">
+        <div className="flex-1 min-h-0 grid grid-cols-4 grid-rows-3 gap-1.5 md:gap-2.5 p-0.5">
           {AAC_GRID_LAYOUT.map((symbolId) => {
             const sym = AAC_SYMBOLS_MAP[symbolId];
             const isTarget = symbolId === targetSymbolId && !isQuestSolved;
