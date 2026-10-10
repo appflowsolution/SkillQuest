@@ -119,8 +119,8 @@ export const FLOOR_SPECS: FloorSpec[] = [
 ];
 
 export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
-  // Game mode: 'bot' (AstroBot co-op) or 'pass-and-play' (2 human players sharing iPad)
-  const [partnerMode, setPartnerMode] = useState<'bot' | 'pass-and-play'>('bot');
+  // Game mode: 'pass-and-play' (2 human players sharing iPad by default) or 'bot' (AstroBot co-op)
+  const [partnerMode, setPartnerMode] = useState<'bot' | 'pass-and-play'>('pass-and-play');
   
   // Turn Taking State: 'player' (Learner) or 'partner' (AstroBot / Peer)
   const [currentTurn, setCurrentTurn] = useState<'player' | 'partner'>('player');
