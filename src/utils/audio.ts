@@ -4,6 +4,7 @@
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private currentAacAudio: HTMLAudioElement | null = null;
 
   private initContext() {
     if (!this.ctx) {
@@ -15,8 +16,21 @@ class SoundEngine {
     }
   }
 
+  public stopAac() {
+    if (this.currentAacAudio) {
+      try {
+        this.currentAacAudio.pause();
+        this.currentAacAudio.currentTime = 0;
+      } catch {
+        // Silent
+      }
+      this.currentAacAudio = null;
+    }
+  }
+
   public setMuted(muted: boolean) {
     this.isMuted = muted;
+    if (muted) this.stopAac();
   }
 
   public getMuted(): boolean {
@@ -474,6 +488,8 @@ class SoundEngine {
   public speakAac(text: string) {
     if (this.isMuted) return;
 
+    this.stopAac();
+
     const normalized = text.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
     const audioPath = normalized.includes('_') 
       ? `/audio/aac/sentence_${normalized}.mp3` 
@@ -482,6 +498,12 @@ class SoundEngine {
     try {
       const audio = new Audio(audioPath);
       audio.volume = 0.95;
+      this.currentAacAudio = audio;
+      audio.onended = () => {
+        if (this.currentAacAudio === audio) {
+          this.currentAacAudio = null;
+        }
+      };
       audio.play().catch(() => {
         const words = normalized.split('_').filter(Boolean);
         if (words.length > 1) {

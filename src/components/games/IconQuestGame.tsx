@@ -453,10 +453,13 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
         setIsQuestSolved(true);
         soundEngine.playAacPhraseSuccess();
 
-        // Speak full sentence upon completion
-        setTimeout(() => {
-          soundEngine.speakAac(activeQuest.targetSentence);
-        }, 350);
+        // Speak full sentence upon completion ONLY if multi-word phrase
+        // (For 1-word phrases like "Open", it was already spoken clearly upon tap)
+        if (activeQuest.phrase.length > 1) {
+          setTimeout(() => {
+            soundEngine.speakAac(activeQuest.targetSentence);
+          }, 750);
+        }
 
         // Update Island Diorama Animation
         setIslandState(prev => ({
