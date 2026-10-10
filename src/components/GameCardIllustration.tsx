@@ -12,7 +12,7 @@ const COVER_IMAGES: Record<string, string> = {
   'more-time': '/covers/more-time.jpg?v=3',
   'turn-taking': '/covers/turn-taking.jpg?v=3',
   'aac-trainer': '/covers/aac-trainer.jpg?v=3',
-  'request-help': '/covers/request-help.jpg?v=3',
+  'request-help': '/covers/request-help.jpg?v=4',
   'echoic-lab': '/covers/echoic-lab.jpg?v=3',
   'echo-lab': '/covers/echoic-lab.jpg?v=3',
 };

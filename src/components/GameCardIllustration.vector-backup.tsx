@@ -117,23 +117,46 @@ export const GameCardIllustration: FC<GameCardIllustrationProps> = ({ gameId }) 
       );
 
     case 'request-help':
-      // Ask the Helper: Robot assistant, lifebuoy, magic helper
+      // Chroma Critters Lab: Fluffy layered critter + hovering Help Drone
       return (
-        <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-rose-900 via-pink-900 to-slate-900 flex items-center justify-center">
-          <div className="relative z-10 flex flex-col items-center">
-            {/* Robot Helper Head */}
-            <div className="w-16 h-14 bg-gradient-to-b from-slate-100 to-slate-300 rounded-2xl border-3 border-white shadow-xl flex flex-col items-center justify-center relative">
-              {/* Antenna */}
-              <div className="absolute -top-3 w-1.5 h-3 bg-rose-500"></div>
-              <div className="absolute -top-4 w-3 h-3 bg-yellow-400 rounded-full border border-white animate-ping"></div>
-              {/* Screen eyes */}
-              <div className="w-11 h-6 bg-slate-900 rounded-lg flex items-center justify-center gap-2">
-                <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-sm shadow-cyan-400"></div>
-                <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full shadow-sm shadow-cyan-400"></div>
+        <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-[#003847] via-[#002f3c] to-[#001f28] flex items-center justify-center p-3">
+          {/* Subtle background stencil grid */}
+          <div className="absolute inset-0 bg-[radial-gradient(#00f2c9_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+          
+          <div className="relative z-10 flex items-center justify-center gap-3">
+            {/* Chroma Critter with multi-color paint layers */}
+            <div className="relative flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full border-3 border-white shadow-xl relative overflow-hidden flex flex-col justify-between">
+                {/* 3 color layers */}
+                <div className="w-full h-[33%] bg-pink-500" />
+                <div className="w-full h-[34%] bg-emerald-400" />
+                <div className="w-full h-[33%] bg-purple-600" />
+                
+                {/* Cute eyes & smile overlay */}
+                <div className="absolute inset-0 flex items-center justify-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-slate-900 border border-white" />
+                  <div className="w-2 h-2 rounded-full bg-slate-900 border border-white" />
+                </div>
+              </div>
+              <div className="mt-1 px-2 py-0.5 bg-emerald-500/90 text-white font-black text-[9px] rounded-full border border-white/40 shadow">
+                CRITTER
               </div>
             </div>
-            <div className="mt-1 px-2.5 py-0.5 bg-rose-500 text-white font-black text-[10px] rounded-full border border-white shadow">
-              SOS HELPER
+
+            {/* Floating Help Drone */}
+            <div className="relative flex flex-col items-center animate-bounce" style={{ animationDuration: '2.5s' }}>
+              <div className="w-10 h-10 bg-slate-100 rounded-full border-2 border-cyan-400 shadow-md flex items-center justify-center relative">
+                {/* SOS light */}
+                <div className="absolute -top-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping" />
+                {/* Screen */}
+                <div className="w-6 h-4 bg-slate-900 rounded-md flex items-center justify-center gap-1">
+                  <div className="w-1 h-1 bg-cyan-400 rounded-full" />
+                  <div className="w-1 h-1 bg-cyan-400 rounded-full" />
+                </div>
+              </div>
+              <div className="mt-1 px-2 py-0.5 bg-rose-500 text-white font-black text-[9px] rounded-full border border-white shadow">
+                HELP BOT
+              </div>
             </div>
           </div>
         </div>
