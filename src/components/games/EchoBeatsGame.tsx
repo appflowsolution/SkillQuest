@@ -153,10 +153,8 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
       setActiveVowel(null);
       setWaitingForChild(true);
       setImitationLatencySeconds(10);
-      // Activation 1: Viseme mouth position & vowel audio at window start
-      triggerVowelSound(currentTarget.vowel);
     }, 2000);
-  }, [currentTarget, triggerVowelSound]);
+  }, [currentTarget]);
 
   // Advance to next target in Echo Quest
   const advanceNextTarget = useCallback(() => {
