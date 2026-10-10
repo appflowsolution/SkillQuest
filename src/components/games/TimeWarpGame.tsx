@@ -16,7 +16,8 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Play
 } from 'lucide-react';
 
 interface TrackItem {
@@ -154,6 +155,9 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
   const [isTimeExtendedBanner, setIsTimeExtendedBanner] = useState(false);
   const [promptActive, setPromptActive] = useState(false);
 
+  // On-demand start state (game starts only when user taps Start)
+  const [isStarted, setIsStarted] = useState(false);
+
   // End state screens
   const [isEraWon, setIsEraWon] = useState(false);
   const [isTransitionComplete, setIsTransitionComplete] = useState(false);
@@ -181,17 +185,17 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
   // Keyboard navigation support (Arrow keys)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isEraWon || isTransitionComplete) return;
+      if (!isStarted || isEraWon || isTransitionComplete) return;
       if (e.key === 'ArrowLeft') moveLeft();
       if (e.key === 'ArrowRight') moveRight();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [moveLeft, moveRight, isEraWon, isTransitionComplete]);
+  }, [isStarted, moveLeft, moveRight, isEraWon, isTransitionComplete]);
 
   // Main Runner Animation Loop (60 FPS) with integrated continuous Collision Detection & Monotonic Spawning
   useEffect(() => {
-    if (isEraWon || isTransitionComplete) return;
+    if (!isStarted || isEraWon || isTransitionComplete) return;
 
     let animationFrameId: number;
     let lastTimestamp = performance.now();
@@ -321,12 +325,12 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
 
     animationFrameId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isEraWon, isTransitionComplete, speedBoost, triggerFeedback, currentEra]);
+  }, [isStarted, isEraWon, isTransitionComplete, speedBoost, triggerFeedback, currentEra]);
 
   // Countdown Portal Timer (Skill 9 Establishing Operation)
   useEffect(() => {
     let interval: number | null = null;
-    if (!isEraWon && !isTransitionComplete && secondsRemaining > 0) {
+    if (isStarted && !isEraWon && !isTransitionComplete && secondsRemaining > 0) {
       interval = window.setInterval(() => {
         setSecondsRemaining(prev => {
           if (prev <= 1) {
@@ -347,7 +351,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     return () => {
       if (interval) window.clearInterval(interval);
     };
-  }, [isEraWon, isTransitionComplete, secondsRemaining, extensionsLeft, promptActive]);
+  }, [isStarted, isEraWon, isTransitionComplete, secondsRemaining, extensionsLeft, promptActive]);
 
   // THE KEY CLINICAL ACTION: Player asks for more time (+1 MORE MINUTE)
   const handleRequestMoreTime = () => {
@@ -389,6 +393,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     setRelicsCount(0);
     setIsEraWon(false);
     setIsTransitionComplete(false);
+    setIsStarted(false);
     setTrackItems([]);
     setPlayerLane(1);
     totalMetersTraveledRef.current = 0;
@@ -404,6 +409,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
     setRelicsCount(0);
     setIsTransitionComplete(false);
     setIsEraWon(false);
+    setIsStarted(false);
     setTrackItems([]);
     setPlayerLane(1);
     totalMetersTraveledRef.current = 0;
@@ -891,6 +897,76 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Return to Mission Hub</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* START MISSION ON-DEMAND OVERLAY */}
+      {!isStarted && (
+        <div className="absolute inset-0 bg-[#001f28]/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+          <div className="max-w-md w-full bg-[#003847] border-3 border-[#00f2c9] rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col items-center relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-16 -right-16 w-36 h-36 bg-[#00f2c9]/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            {/* Target Relic Big Preview */}
+            <div className="w-24 h-24 rounded-3xl bg-[#002732] border-3 border-[#00f2c9] flex items-center justify-center p-3 mb-4 shadow-xl ring-4 ring-[#00f2c9]/30 animate-pulse">
+              <TimeItemIcon type={currentEra.targetItemType} className="w-full h-full drop-shadow-[0_0_15px_rgba(0,242,201,0.6)]" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-4 py-1 bg-[#ffb703] text-slate-950 rounded-full text-xs font-black uppercase tracking-wider mb-2 shadow">
+              <Compass className="w-3.5 h-3.5" />
+              <span>{currentEra.name}</span>
+            </div>
+
+            <h3 className="text-2xl md:text-3xl font-black text-white mb-2 tracking-tight">
+              Ready to Time Warp?
+            </h3>
+
+            <p className="text-[#a5d8d8] text-sm font-semibold mb-4">
+              Collect <b className="text-amber-300 font-black">{currentEra.targetRelics} {currentEra.targetItemName}</b> before time runs out to charge the portal!
+            </p>
+
+            {/* Instruction Badges */}
+            <div className="grid grid-cols-2 gap-3 w-full bg-[#002732] p-3.5 rounded-2xl border border-white/10 mb-6 text-xs text-left">
+              <div className="flex items-start gap-2">
+                <span className="text-lg">🕹️</span>
+                <div>
+                  <div className="text-white font-black">Controls</div>
+                  <div className="text-[#84cece] text-[11px]">Arrow keys, buttons or swipe</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-lg">⏳</span>
+                <div>
+                  <div className="text-white font-black">Time Limits</div>
+                  <div className="text-[#84cece] text-[11px]">Ask for +1 More Minute if needed</div>
+                </div>
+              </div>
+            </div>
+
+            {/* START BUTTON */}
+            <div className="w-full flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  soundEngine.playTap();
+                  setIsStarted(true);
+                }}
+                className="w-full py-4 bg-gradient-to-r from-emerald-400 via-[#00f2c9] to-teal-400 hover:from-emerald-300 hover:to-[#22fbd6] active:scale-98 text-slate-950 rounded-2xl font-black text-lg md:text-xl flex items-center justify-center gap-3 shadow-xl shadow-[#00f2c9]/30 transition-all border-2 border-white cursor-pointer"
+              >
+                <Play className="w-6 h-6 fill-slate-950 stroke-[3]" />
+                <span>START MISSION</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  soundEngine.playTap();
+                  onExit();
+                }}
+                className="w-full py-2 text-[#00f2c9]/80 hover:text-white text-xs font-bold transition-all"
+              >
+                Return to Missions
               </button>
             </div>
           </div>
