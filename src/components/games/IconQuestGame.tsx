@@ -642,22 +642,7 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
       </div>
 
       {/* STREAMLINED GOAL PHRASE HEADER (COMPACT FOR IPAD FULL-GRID VIEW) */}
-      <div className="w-full bg-[#00171f]/95 border-b-2 border-[#00576b]/70 py-2 px-3 sm:px-6 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20 shadow-lg">
-        {/* Quest Info */}
-        <div className="flex items-center gap-2.5 text-left">
-          <div className="w-7 h-7 rounded-xl bg-amber-500/20 flex items-center justify-center text-yellow-300 font-black text-xs shrink-0 border border-amber-400/40">
-            {questMode === 'story' ? `${currentQuestIndex + 1}/5` : `#${randomRoundCount}`}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider">
-              {activeQuest.location} · {activeQuest.title}
-            </span>
-            <span className="text-xs font-bold text-white/90 leading-tight">
-              {isQuestSolved ? activeQuest.actionText : activeQuest.description}
-            </span>
-          </div>
-        </div>
-
+      <div className="w-full bg-[#00171f]/95 border-b-2 border-[#00576b]/70 py-1.5 px-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 z-20 shadow-lg">
         {/* Central Goal Phrase Pill */}
         <div className="inline-flex items-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-1.5 bg-gradient-to-r from-[#001f28] via-[#002833] to-[#001f28] border-2 border-[#00f2c9] rounded-2xl shadow-[0_0_15px_rgba(0,242,201,0.25)] shrink-0">
           <span className="text-[11px] font-black text-[#00f2c9] uppercase tracking-wider hidden sm:inline">
