@@ -76,7 +76,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
   const currentTarget = VOWEL_MODELS[targetIndex % VOWEL_MODELS.length];
   const [isModeling, setIsModeling] = useState(false);
   const [waitingForChild, setWaitingForChild] = useState(false);
-  const [imitationLatencySeconds, setImitationLatencySeconds] = useState(6);
+  const [imitationLatencySeconds, setImitationLatencySeconds] = useState(10);
 
   // Clinical RBT Metrics Tracker
   const [independentTries, setIndependentTries] = useState(0);
@@ -152,9 +152,11 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
       setIsModeling(false);
       setActiveVowel(null);
       setWaitingForChild(true);
-      setImitationLatencySeconds(6);
+      setImitationLatencySeconds(10);
+      // Activation 1: Viseme mouth position & vowel audio at window start
+      triggerVowelSound(currentTarget.vowel);
     }, 1400);
-  }, [currentTarget]);
+  }, [currentTarget, triggerVowelSound]);
 
   // Advance to next target in Echo Quest
   const advanceNextTarget = useCallback(() => {
@@ -192,7 +194,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
     }
   }, [gameMode, currentTarget, triggerVowelSound, triggerCelebration, advanceNextTarget]);
 
-  // ECHO QUEST COUNTDOWN LATENCY TIMER
+  // ECHO QUEST 10-SECOND LATENCY & PERIODIC VISEME MODEL TIMER (3 ACTIVATIONS: 10s, 7s, 4s)
   useEffect(() => {
     if (gameMode !== 'quest' || !waitingForChild) return;
 
@@ -207,11 +209,18 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
     }
 
     const timer = setInterval(() => {
-      setImitationLatencySeconds(prev => Math.max(0, prev - 1));
+      setImitationLatencySeconds(prev => {
+        const nextSec = Math.max(0, prev - 1);
+        // Activations 2 and 3: periodic mouth viseme & audio at 7s and 4s
+        if (nextSec === 7 || nextSec === 4) {
+          triggerVowelSound(currentTarget.vowel);
+        }
+        return nextSec;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameMode, waitingForChild, imitationLatencySeconds, modelCurrentVowel]);
+  }, [gameMode, waitingForChild, imitationLatencySeconds, currentTarget, modelCurrentVowel, triggerVowelSound]);
 
   // Initial Target Modeling when entering Quest or changing target
   useEffect(() => {
