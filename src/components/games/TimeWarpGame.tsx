@@ -514,7 +514,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
       </div>
 
       {/* RUNNER PLAY ARENA (3-Lane Time Vortex Highway) */}
-      <div className="flex-1 relative overflow-hidden flex flex-col justify-between">
+      <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col justify-between">
         {/* Living Twinkling Stars Background */}
         <CosmicBackground />
 
@@ -582,7 +582,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
         )}
 
         {/* 3-LANE PERSPECTIVE HIGHWAY */}
-        <div className="relative flex-1 max-w-2xl mx-auto w-full flex perspective-1000">
+        <div className="relative flex-1 min-h-0 max-w-2xl mx-auto w-full flex">
           {/* Lane 0: LEFT */}
           <div 
             onClick={() => { soundEngine.playTap(); setPlayerLane(0); }}
@@ -632,13 +632,14 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
                 style={{
                   left: laneX,
                   top: `${item.y}%`,
-                  transform: 'translate(-50%, -50%)',
+                  transform: 'translate3d(-50%, -50%, 0)',
+                  willChange: 'top',
                 }}
-                className="absolute z-15 pointer-events-none transition-all duration-75 flex flex-col items-center"
+                className="absolute z-15 pointer-events-none flex flex-col items-center"
               >
                 {item.type === 'collectible' && item.itemType ? (
                   <div className="flex flex-col items-center gap-1">
-                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#00242e]/95 border-3 border-amber-400 p-1.5 shadow-xl shadow-amber-500/40 flex items-center justify-center animate-bounce">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#00242e]/95 border-3 border-amber-400 p-1.5 shadow-xl shadow-amber-500/40 flex items-center justify-center">
                       <TimeItemIcon type={item.itemType} />
                     </div>
                     <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full shadow-md tracking-wider uppercase">
