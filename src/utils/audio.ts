@@ -474,7 +474,7 @@ class SoundEngine {
   public speakAac(text: string) {
     if (this.isMuted) return;
 
-    const normalized = text.trim().toLowerCase().replace(/\s+/g, '_');
+    const normalized = text.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
     const audioPath = normalized.includes('_') 
       ? `/audio/aac/sentence_${normalized}.mp3` 
       : `/audio/aac/${normalized}.mp3`;
@@ -483,11 +483,35 @@ class SoundEngine {
       const audio = new Audio(audioPath);
       audio.volume = 0.95;
       audio.play().catch(() => {
-        // Fallback to Web Speech API
-        this.fallbackWebSpeech(text);
+        const words = normalized.split('_').filter(Boolean);
+        if (words.length > 1) {
+          this.playWordSequence(words);
+        } else {
+          this.fallbackWebSpeech(text);
+        }
       });
     } catch {
       this.fallbackWebSpeech(text);
+    }
+  }
+
+  // Sequentially play neural MP3 files word-by-word with natural pacing
+  public playWordSequence(words: string[], index = 0) {
+    if (this.isMuted || index >= words.length) return;
+    const word = words[index];
+    try {
+      const audio = new Audio(`/audio/aac/${word}.mp3`);
+      audio.volume = 0.95;
+      audio.onended = () => {
+        setTimeout(() => {
+          this.playWordSequence(words, index + 1);
+        }, 70);
+      };
+      audio.play().catch(() => {
+        this.playWordSequence(words, index + 1);
+      });
+    } catch {
+      this.playWordSequence(words, index + 1);
     }
   }
 

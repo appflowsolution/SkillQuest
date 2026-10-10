@@ -18,7 +18,9 @@ import {
   Eye, 
   Hand,
   CheckCircle2,
-  Compass
+  Compass,
+  Shuffle,
+  Dices
 } from 'lucide-react';
 
 interface IconQuestGameProps {
@@ -38,7 +40,9 @@ interface QuestStage {
   actionText: string;
 }
 
-const QUEST_STAGES: QuestStage[] = [
+export type QuestGameMode = 'story' | 'random';
+
+const QUEST_STORY_STAGES: QuestStage[] = [
   {
     id: 1,
     title: 'The Sunken Temple Gate',
@@ -86,6 +90,248 @@ const QUEST_STAGES: QuestStage[] = [
   },
 ];
 
+const ALL_RANDOM_QUESTS: QuestStage[] = [
+  // 1-Word Functional Manding / Tacts
+  {
+    id: 101,
+    title: 'The Sunken Temple Gate',
+    location: 'Ancient Stone Pass',
+    phrase: ['open'],
+    targetSentence: 'Open',
+    description: 'The ancient stone gate is sealed! Speak "OPEN" to unlock the entrance.',
+    actionText: 'The ancient temple gate lowers into the ground!',
+  },
+  {
+    id: 102,
+    title: 'The Starlight Playground',
+    location: 'Celestial Meadows',
+    phrase: ['play'],
+    targetSentence: 'Play',
+    description: 'The cosmic toys are asleep! Speak "PLAY" to activate the playground.',
+    actionText: 'Musical instruments glow and start playing happy tunes!',
+  },
+  {
+    id: 103,
+    title: 'The Lost Explorer Drone',
+    location: 'Whispering Canyon',
+    phrase: ['help'],
+    targetSentence: 'Help',
+    description: 'A friendly rover is stuck! Speak "HELP" to assist him.',
+    actionText: 'The friendly drone lights up and thanks you with a happy beep!',
+  },
+  {
+    id: 104,
+    title: 'The Observatory Telescope',
+    location: 'Starlight Cliffside',
+    phrase: ['look'],
+    targetSentence: 'Look',
+    description: 'A shooting comet is passing by! Speak "LOOK" to aim the telescope.',
+    actionText: 'The brass telescope focuses on a magnificent golden nebula!',
+  },
+  {
+    id: 105,
+    title: 'The Runaway Stardust Turbine',
+    location: 'Windmill Plateau',
+    phrase: ['stop'],
+    targetSentence: 'Stop',
+    description: 'The turbine is spinning too fast! Speak "STOP" to steady it.',
+    actionText: 'The turbine slows down and releases a peaceful blue shimmer!',
+  },
+  {
+    id: 106,
+    title: 'The Wishing Well of Stars',
+    location: 'Crystal Oasis',
+    phrase: ['more'],
+    targetSentence: 'More',
+    description: 'The magical fountain needs extra energy! Speak "MORE" for starlight.',
+    actionText: 'Glistening water fountains leap into the air with golden bubbles!',
+  },
+  {
+    id: 107,
+    title: 'The Sleeping Starlight Sprite',
+    location: 'Cosmic Canopy',
+    phrase: ['star'],
+    targetSentence: 'Star',
+    description: 'A friendly star sprite wants to say hello! Speak "STAR" to call it.',
+    actionText: 'A smiling 3D star character descends and twirls with joy!',
+  },
+  {
+    id: 108,
+    title: 'The Geode Crystal Cavern',
+    location: 'Prism Caves',
+    phrase: ['crystal'],
+    targetSentence: 'Crystal',
+    description: 'The glowing cavern needs energy! Speak "CRYSTAL" to illuminate.',
+    actionText: 'Giant amethyst and cyan crystals ignite with luminescence!',
+  },
+
+  // 2-Word Functional Carrier Phrases
+  {
+    id: 201,
+    title: 'The Crystal Chasm',
+    location: 'Bioluminescent Canyon',
+    phrase: ['want', 'bridge'],
+    targetSentence: 'Want Bridge',
+    description: 'A deep ravine blocks our way. Speak "WANT" + "BRIDGE" to summon the path!',
+    actionText: 'A radiant crystal bridge manifests across the chasm!',
+  },
+  {
+    id: 202,
+    title: 'The Night Sky Pavilion',
+    location: 'Astral Highlands',
+    phrase: ['want', 'star'],
+    targetSentence: 'Want Star',
+    description: 'The night sky needs a bright star. Speak "WANT" + "STAR" to place it!',
+    actionText: 'A magnificent constellation ignites in the midnight sky!',
+  },
+  {
+    id: 203,
+    title: 'The Cosmic Jeweled Altar',
+    location: 'Gemstone Valley',
+    phrase: ['want', 'crystal'],
+    targetSentence: 'Want Crystal',
+    description: 'The altar asks for a crystal tribute. Speak "WANT" + "CRYSTAL"!',
+    actionText: 'The gemstone altar sparkles with dazzling rainbow prisms!',
+  },
+  {
+    id: 204,
+    title: 'The Sky Beacon Lighthouse',
+    location: 'Starlight Cliffside',
+    phrase: ['more', 'star'],
+    targetSentence: 'More Star',
+    description: 'The beacon needs celestial energy. Speak "MORE" + "STAR" to ignite the light!',
+    actionText: 'The grand lighthouse ignites and pierces the cosmic fog!',
+  },
+  {
+    id: 205,
+    title: 'The Power Core Chamber',
+    location: 'Subterranean Vault',
+    phrase: ['more', 'crystal'],
+    targetSentence: 'More Crystal',
+    description: 'The power core is low. Speak "MORE" + "CRYSTAL" to recharge it.',
+    actionText: 'The energy crystal matrix hums with radiant turquoise power!',
+  },
+  {
+    id: 206,
+    title: 'The Singing Coral Grove',
+    location: 'Crystal Lagoon',
+    phrase: ['go', 'play'],
+    targetSentence: 'Go Play',
+    description: 'Friendly island creatures await! Speak "GO" + "PLAY" to dance with them!',
+    actionText: 'Bioluminescent flora blossom and musical fireflies dance!',
+  },
+  {
+    id: 207,
+    title: 'The Heavy Island Hatch',
+    location: 'Forgotten Bunker',
+    phrase: ['help', 'open'],
+    targetSentence: 'Help Open',
+    description: 'The underground passage is heavy! Speak "HELP" + "OPEN" together.',
+    actionText: 'Hydraulic gears turn and the heavy hatch swings open wide!',
+  },
+  {
+    id: 208,
+    title: 'The Celestial Skylight',
+    location: 'Mount Zenith',
+    phrase: ['look', 'star'],
+    targetSentence: 'Look Star',
+    description: 'A shooting star crosses the peak! Speak "LOOK" + "STAR" to spot it.',
+    actionText: 'Shooting stardust trails trace across the starlit sky!',
+  },
+  {
+    id: 209,
+    title: 'The Shimmering Grotto',
+    location: 'Mirror Cave',
+    phrase: ['look', 'crystal'],
+    targetSentence: 'Look Crystal',
+    description: 'A prism crystal is hiding! Speak "LOOK" + "CRYSTAL" to discover it.',
+    actionText: 'The hidden prism catches the light and reveals secret ruins!',
+  },
+  {
+    id: 210,
+    title: 'The Whirling Musical Carousel',
+    location: 'Fairground Island',
+    phrase: ['stop', 'play'],
+    targetSentence: 'Stop Play',
+    description: 'The magical carousel is spinning wild! Speak "STOP" + "PLAY" to pause it.',
+    actionText: 'The musical carousel comes to a calm, safe resting stop!',
+  },
+  {
+    id: 211,
+    title: 'The Stranded Sailor Bot',
+    location: 'Shell Beach',
+    phrase: ['please', 'help'],
+    targetSentence: 'Please Help',
+    description: 'A robotic sailor needs assistance. Speak "PLEASE" + "HELP" nicely.',
+    actionText: 'The sailor robot salutes with gratitude and fixes his boat!',
+  },
+
+  // 3-Word Expanded Phrases
+  {
+    id: 301,
+    title: 'The Celestial Treasure Vault',
+    location: 'Temple of the Starlight King',
+    phrase: ['want', 'crystal', 'please'],
+    targetSentence: 'Want Crystal Please',
+    description: 'The final vault awaits! Speak "WANT" + "CRYSTAL" + "PLEASE" to open the chest!',
+    actionText: 'The cosmic treasure vault unlocks with showers of starlight!',
+  },
+  {
+    id: 302,
+    title: 'The Wishing Tree of Eldoria',
+    location: 'Enchanted Forest',
+    phrase: ['want', 'star', 'please'],
+    targetSentence: 'Want Star Please',
+    description: 'Ask the wishing tree politely: Speak "WANT" + "STAR" + "PLEASE"!',
+    actionText: 'Golden starlight fruit drops gently from the branches!',
+  },
+  {
+    id: 303,
+    title: 'The Grand Sky Bridge Gate',
+    location: 'Cloudtop Fortress',
+    phrase: ['want', 'bridge', 'please'],
+    targetSentence: 'Want Bridge Please',
+    description: 'Request access across the clouds: Speak "WANT" + "BRIDGE" + "PLEASE"!',
+    actionText: 'A golden starlight bridge extends across the floating clouds!',
+  },
+  {
+    id: 304,
+    title: 'The Constellation Weaver',
+    location: 'Cosmic Loom',
+    phrase: ['more', 'star', 'please'],
+    targetSentence: 'More Star Please',
+    description: 'Add more starlight to complete the tapestry: Speak "MORE" + "STAR" + "PLEASE"!',
+    actionText: 'The celestial tapestry glows with radiant starlight patterns!',
+  },
+  {
+    id: 305,
+    title: 'The Crystal Alchemist',
+    location: 'Alchemy Lab',
+    phrase: ['more', 'crystal', 'please'],
+    targetSentence: 'More Crystal Please',
+    description: 'The beaker needs crystals: Speak "MORE" + "CRYSTAL" + "PLEASE"!',
+    actionText: 'The beaker bubbles with radiant luminescent starlight potion!',
+  },
+  {
+    id: 306,
+    title: 'The Ancient Golden Archive',
+    location: 'Royal Library',
+    phrase: ['please', 'help', 'open'],
+    targetSentence: 'Please Help Open',
+    description: 'Ask for assistance at the grand vault: Speak "PLEASE" + "HELP" + "OPEN"!',
+    actionText: 'The golden archive doors slide back to reveal ancient scrolls!',
+  },
+  {
+    id: 307,
+    title: 'The Island Carnival Finale',
+    location: 'Festival Plaza',
+    phrase: ['go', 'play', 'more'],
+    targetSentence: 'Go Play More',
+    description: 'Keep the island party going! Speak "GO" + "PLAY" + "MORE"!',
+    actionText: 'Fireworks burst in the sky and all the island friends dance!',
+  },
+];
+
 // 3x4 Grid of Core AAC Vocabulary
 const AAC_GRID_LAYOUT: AacSymbolId[] = [
   'want', 'go', 'open', 'play',
@@ -94,8 +340,11 @@ const AAC_GRID_LAYOUT: AacSymbolId[] = [
 ];
 
 export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
-  // Current Quest Progression (0 to 4)
+  // Game Mode: Sequential Story Mode vs Random Procedural Mode
+  const [questMode, setQuestMode] = useState<QuestGameMode>('story');
   const [currentQuestIndex, setCurrentQuestIndex] = useState(0);
+  const [randomQuestIndex, setRandomQuestIndex] = useState(0);
+  const [randomRoundCount, setRandomRoundCount] = useState(1);
   
   // RBT Physical Guidance Level (Skill 10 Clinical Target)
   const [guidanceLevel, setGuidanceLevel] = useState<GuidanceLevel>('full');
@@ -124,8 +373,42 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
     chestOpen: false,
   });
 
-  const activeQuest = QUEST_STAGES[currentQuestIndex];
+  const activeQuest = questMode === 'story' 
+    ? (QUEST_STORY_STAGES[currentQuestIndex] || QUEST_STORY_STAGES[0])
+    : (ALL_RANDOM_QUESTS[randomQuestIndex] || ALL_RANDOM_QUESTS[0]);
+
   const targetSymbolId = activeQuest?.phrase[currentStepInPhrase];
+
+  // Pick a fresh random quest from the pool
+  const pickNewRandomQuest = useCallback(() => {
+    soundEngine.playTap();
+    setSentenceStrip([]);
+    setCurrentStepInPhrase(0);
+    setIsQuestSolved(false);
+    setFeedbackMessage(null);
+    setRandomRoundCount(r => r + 1);
+    setRandomQuestIndex((prev) => {
+      let next = Math.floor(Math.random() * ALL_RANDOM_QUESTS.length);
+      if (next === prev) {
+        next = (next + 1) % ALL_RANDOM_QUESTS.length;
+      }
+      return next;
+    });
+  }, []);
+
+  // Toggle between Story Mode and Random Mode
+  const toggleQuestMode = useCallback(() => {
+    soundEngine.playTap();
+    const nextMode = questMode === 'story' ? 'random' : 'story';
+    setQuestMode(nextMode);
+    setSentenceStrip([]);
+    setCurrentStepInPhrase(0);
+    setIsQuestSolved(false);
+    setFeedbackMessage(null);
+    if (nextMode === 'random') {
+      setRandomQuestIndex(Math.floor(Math.random() * ALL_RANDOM_QUESTS.length));
+    }
+  }, [questMode]);
 
   // Auto-play Guide Spark sound on step change
   const prevTargetRef = useRef<AacSymbolId | undefined>(targetSymbolId);
@@ -178,11 +461,11 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
         // Update Island Diorama Animation
         setIslandState(prev => ({
           ...prev,
-          gateOpen: prev.gateOpen || activeQuest.id === 1,
-          bridgeActive: prev.bridgeActive || activeQuest.id === 2,
-          beaconLit: prev.beaconLit || activeQuest.id === 3,
-          creaturesDancing: prev.creaturesDancing || activeQuest.id === 4,
-          chestOpen: prev.chestOpen || activeQuest.id === 5,
+          gateOpen: prev.gateOpen || activeQuest.phrase.includes('open') || activeQuest.phrase.includes('help') || activeQuest.id === 1,
+          bridgeActive: prev.bridgeActive || activeQuest.phrase.includes('bridge') || activeQuest.phrase.includes('go') || activeQuest.id === 2,
+          beaconLit: prev.beaconLit || activeQuest.phrase.includes('star') || activeQuest.phrase.includes('look') || activeQuest.id === 3,
+          creaturesDancing: prev.creaturesDancing || activeQuest.phrase.includes('play') || activeQuest.phrase.includes('more') || activeQuest.id === 4,
+          chestOpen: prev.chestOpen || activeQuest.phrase.includes('crystal') || activeQuest.phrase.includes('please') || activeQuest.id === 5,
         }));
 
         setScore(s => s + 100);
@@ -194,18 +477,34 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
 
         // Advance to next quest after celebration (2.8s)
         setTimeout(() => {
-          if (currentQuestIndex + 1 >= QUEST_STAGES.length) {
-            setIsVictory(true);
-            soundEngine.playSuccess();
-            try {
-              confetti({ particleCount: 150, spread: 100, origin: { y: 0.4 } });
-            } catch { /* ignore */ }
+          if (questMode === 'story') {
+            if (currentQuestIndex + 1 >= QUEST_STORY_STAGES.length) {
+              setIsVictory(true);
+              soundEngine.playSuccess();
+              try {
+                confetti({ particleCount: 150, spread: 100, origin: { y: 0.4 } });
+              } catch { /* ignore */ }
+            } else {
+              setCurrentQuestIndex(q => q + 1);
+              setSentenceStrip([]);
+              setCurrentStepInPhrase(0);
+              setIsQuestSolved(false);
+              setFeedbackMessage(null);
+            }
           } else {
-            setCurrentQuestIndex(q => q + 1);
+            // Endless Random Mode: roll next quest seamlessly
             setSentenceStrip([]);
             setCurrentStepInPhrase(0);
             setIsQuestSolved(false);
             setFeedbackMessage(null);
+            setRandomRoundCount(r => r + 1);
+            setRandomQuestIndex((prev) => {
+              let next = Math.floor(Math.random() * ALL_RANDOM_QUESTS.length);
+              if (next === prev) {
+                next = (next + 1) % ALL_RANDOM_QUESTS.length;
+              }
+              return next;
+            });
           }
         }, 2800);
       } else {
@@ -228,7 +527,8 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
     currentStepInPhrase, 
     activeQuest, 
     guidanceLevel, 
-    currentQuestIndex
+    currentQuestIndex,
+    questMode
   ]);
 
   // Read entire sentence strip aloud
@@ -291,7 +591,11 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
           <div className="flex items-center gap-1.5 bg-[#002833] px-3 py-1 rounded-full border border-white/15">
             <Compass className="w-3.5 h-3.5 text-[#f59e0b]" />
             <span className="text-xs font-black text-white">
-              Quest: <strong className="text-yellow-300 font-extrabold">{currentQuestIndex + 1} / {QUEST_STAGES.length}</strong>
+              {questMode === 'story' ? (
+                <>Quest: <strong className="text-yellow-300 font-extrabold">{currentQuestIndex + 1} / {QUEST_STORY_STAGES.length}</strong></>
+              ) : (
+                <>Round: <strong className="text-yellow-300 font-extrabold">#{randomRoundCount} (Random)</strong></>
+              )}
             </span>
           </div>
         </div>
@@ -363,10 +667,10 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
       {/* UPPER HALF: INTERACTIVE ISLAND DIORAMA */}
       <div className="h-48 md:h-56 relative overflow-hidden flex flex-col justify-between px-4 py-2 border-b-2 border-[#00576b]/70 bg-gradient-to-b from-[#00171f]/80 to-[#002f3c]/90">
         {/* Floating Quest Description Card */}
-        <div className="z-20 flex items-center justify-between w-full max-w-2xl mx-auto">
+        <div className="z-20 flex items-center justify-between gap-2 w-full max-w-2xl mx-auto">
           <div className="flex items-center gap-2 bg-[#001f28]/90 border border-amber-400/50 rounded-2xl px-3 py-1.5 shadow-lg backdrop-blur-md">
-            <div className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-yellow-300 font-black text-xs">
-              {currentQuestIndex + 1}
+            <div className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-yellow-300 font-black text-xs shrink-0">
+              {questMode === 'story' ? `${currentQuestIndex + 1}/5` : `#${randomRoundCount}`}
             </div>
             <div className="flex flex-col text-left">
               <span className="text-[10px] font-black uppercase text-amber-300">
@@ -378,12 +682,38 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
             </div>
           </div>
 
-          {/* Feedback Pop-Up */}
-          {feedbackMessage && (
-            <div className="animate-bounce bg-slate-950/95 border-2 border-yellow-400 text-yellow-300 font-black px-4 py-1.5 rounded-full text-xs shadow-xl tracking-wide uppercase shrink-0">
-              {feedbackMessage}
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Feedback Pop-Up */}
+            {feedbackMessage && (
+              <div className="animate-bounce bg-slate-950/95 border-2 border-yellow-400 text-yellow-300 font-black px-3 py-1 rounded-full text-xs shadow-xl tracking-wide uppercase shrink-0">
+                {feedbackMessage}
+              </div>
+            )}
+
+            {/* Mode Switcher */}
+            <button
+              onClick={toggleQuestMode}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-black border transition-all flex items-center gap-1 shadow-sm cursor-pointer ${
+                questMode === 'random'
+                  ? 'bg-purple-600/90 hover:bg-purple-500 text-white border-purple-400'
+                  : 'bg-[#002833] hover:bg-[#003847] text-[#84cece] border-white/10'
+              }`}
+              title={questMode === 'random' ? 'Random Mode active (infinite)' : 'Switch to Random Mode'}
+            >
+              <Shuffle className="w-3 h-3" />
+              <span>{questMode === 'random' ? 'Random' : 'Story'}</span>
+            </button>
+
+            {questMode === 'random' && (
+              <button
+                onClick={pickNewRandomQuest}
+                className="p-1.5 bg-[#002833] hover:bg-[#003d4c] active:scale-95 text-yellow-300 rounded-xl border border-yellow-400/40 transition-all cursor-pointer"
+                title="Roll a new random quest"
+              >
+                <Dices className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Animated Vector Island Environment Scene */}
@@ -664,13 +994,31 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
             </div>
 
             {/* Buttons */}
-            <div className="w-full flex flex-col gap-3">
+            <div className="w-full flex flex-col gap-2.5">
+              <button
+                onClick={() => {
+                  soundEngine.playTap();
+                  setIsVictory(false);
+                  setQuestMode('random');
+                  setRandomRoundCount(1);
+                  setRandomQuestIndex(Math.floor(Math.random() * ALL_RANDOM_QUESTS.length));
+                  setSentenceStrip([]);
+                  setCurrentStepInPhrase(0);
+                  setIsQuestSolved(false);
+                  setFeedbackMessage(null);
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 active:scale-98 text-white rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-purple-500/30 transition-all border-2 border-white/80 cursor-pointer"
+              >
+                <Shuffle className="w-5 h-5" />
+                <span>Continue in Random Mode</span>
+              </button>
+
               <button
                 onClick={handleRestart}
-                className="w-full py-4 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-yellow-300 hover:to-amber-400 active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-amber-500/30 transition-all border-2 border-white cursor-pointer"
+                className="w-full py-3 bg-[#002833] hover:bg-[#003847] active:scale-98 text-yellow-300 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 border border-white/20 transition-all cursor-pointer"
               >
-                <RotateCcw className="w-5 h-5" />
-                <span>Play Quest Again</span>
+                <RotateCcw className="w-4 h-4" />
+                <span>Play Story Again</span>
               </button>
 
               <button
@@ -678,10 +1026,9 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
                   soundEngine.playTap();
                   onExit();
                 }}
-                className="w-full py-3.5 bg-[#002732] hover:bg-[#001f28] active:scale-98 text-[#00f2c9] rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border border-[#00c9a7]/40 cursor-pointer"
+                className="w-full py-2.5 bg-transparent hover:bg-white/5 active:scale-98 text-slate-400 hover:text-white rounded-xl font-bold text-xs flex items-center justify-center transition-all cursor-pointer"
               >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Return to Mission Hub</span>
+                Back to Dashboard
               </button>
             </div>
           </div>
