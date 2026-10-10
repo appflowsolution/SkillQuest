@@ -155,7 +155,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
       setImitationLatencySeconds(10);
       // Activation 1: Viseme mouth position & vowel audio at window start
       triggerVowelSound(currentTarget.vowel);
-    }, 1400);
+    }, 2000);
   }, [currentTarget, triggerVowelSound]);
 
   // Advance to next target in Echo Quest
@@ -194,7 +194,7 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
     }
   }, [gameMode, currentTarget, triggerVowelSound, triggerCelebration, advanceNextTarget]);
 
-  // ECHO QUEST 10-SECOND LATENCY & PERIODIC VISEME MODEL TIMER (3 ACTIVATIONS: 10s, 7s, 4s)
+  // ECHO QUEST 10-SECOND LATENCY COUNTDOWN
   useEffect(() => {
     if (gameMode !== 'quest' || !waitingForChild) return;
 
@@ -209,18 +209,19 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
     }
 
     const timer = setInterval(() => {
-      setImitationLatencySeconds(prev => {
-        const nextSec = Math.max(0, prev - 1);
-        // Activations 2 and 3: periodic mouth viseme & audio at 7s and 4s
-        if (nextSec === 7 || nextSec === 4) {
-          triggerVowelSound(currentTarget.vowel);
-        }
-        return nextSec;
-      });
+      setImitationLatencySeconds(prev => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameMode, waitingForChild, imitationLatencySeconds, currentTarget, modelCurrentVowel, triggerVowelSound]);
+  }, [gameMode, waitingForChild, imitationLatencySeconds, modelCurrentVowel]);
+
+  // ACTIVATIONS 2 AND 3: Periodic mouth viseme & audio prompt at 7s and 4s
+  useEffect(() => {
+    if (gameMode !== 'quest' || !waitingForChild) return;
+    if (imitationLatencySeconds === 7 || imitationLatencySeconds === 4) {
+      triggerVowelSound(currentTarget.vowel);
+    }
+  }, [gameMode, waitingForChild, imitationLatencySeconds, currentTarget.vowel, triggerVowelSound]);
 
   // Initial Target Modeling when entering Quest or changing target
   useEffect(() => {

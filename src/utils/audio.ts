@@ -551,7 +551,7 @@ class SoundEngine {
     this.stopAac();
 
     try {
-      const audio = new Audio(`/audio/echo/vowel_${vowel}.mp3`);
+      const audio = new Audio(`/audio/echo/vowel_${vowel}.mp3?v=20261010b`);
       audio.volume = 0.95;
       this.currentAacAudio = audio;
       audio.onended = () => {
@@ -573,7 +573,7 @@ class SoundEngine {
     this.stopAac();
 
     try {
-      const audio = new Audio(`/audio/echo/model_${vowel}.mp3`);
+      const audio = new Audio(`/audio/echo/model_${vowel}.mp3?v=20261010b`);
       audio.volume = 0.95;
       this.currentAacAudio = audio;
       audio.onended = () => {
