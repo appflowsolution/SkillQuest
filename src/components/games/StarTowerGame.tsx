@@ -48,10 +48,10 @@ export const FLOOR_SPECS: FloorSpec[] = [
     floorNumber: 1,
     type: 'habitat',
     name: 'Crystal Habitat',
-    widthClass: 'w-44', // 176px - Base amplia para dominar el timing inicial
-    speed: 1.35,        // Período suave de 4.6s
-    tolerance: 14.0,    // Gran margen de éxito
-    environment: 'Superficie Cósmica · Viento Calmo (1.3x)',
+    widthClass: 'w-44', // 176px - Wide base for mastering initial timing
+    speed: 1.35,        // Smooth period of 4.6s
+    tolerance: 14.0,    // High success margin
+    environment: 'Cosmic Surface · Calm Winds (1.3x)',
     windIntensity: 'none',
     perfectBonus: 50,
     fitBonus: 25,
@@ -61,9 +61,9 @@ export const FLOOR_SPECS: FloorSpec[] = [
     type: 'reactor',
     name: 'Starlight Reactor',
     widthClass: 'w-40', // 160px
-    speed: 1.85,        // +37% más dinámico (período 3.4s)
+    speed: 1.85,        // +37% faster (period 3.4s)
     tolerance: 12.0,
-    environment: 'Troposfera · Brisa Ligera (1.8x)',
+    environment: 'Troposphere · Light Breeze (1.8x)',
     windIntensity: 'light',
     perfectBonus: 60,
     fitBonus: 30,
@@ -73,9 +73,9 @@ export const FLOOR_SPECS: FloorSpec[] = [
     type: 'greenhouse',
     name: 'Cosmic Bio-Dome',
     widthClass: 'w-36', // 144px
-    speed: 2.4,         // Ritmo medio acelerado (período 2.6s)
+    speed: 2.4,         // Medium accelerated pace (period 2.6s)
     tolerance: 10.5,
-    environment: 'Estratosfera · Corrientes Iónicas (2.4x)',
+    environment: 'Stratosphere · Ionic Currents (2.4x)',
     windIntensity: 'moderate',
     perfectBonus: 75,
     fitBonus: 35,
@@ -85,9 +85,9 @@ export const FLOOR_SPECS: FloorSpec[] = [
     type: 'observatory',
     name: 'Sky Observatory',
     widthClass: 'w-32', // 128px
-    speed: 2.95,        // Desafío de coordinación (período 2.1s)
+    speed: 2.95,        // Coordination challenge (period 2.1s)
     tolerance: 9.0,
-    environment: 'Termosfera · Ráfagas Solares (3.0x)',
+    environment: 'Thermosphere · Solar Gusts (3.0x)',
     windIntensity: 'moderate',
     perfectBonus: 90,
     fitBonus: 45,
@@ -97,9 +97,9 @@ export const FLOOR_SPECS: FloorSpec[] = [
     type: 'solarsails',
     name: 'Plasma Solar Wings',
     widthClass: 'w-28', // 112px
-    speed: 3.55,        // Rápido y exigente (período 1.8s)
+    speed: 3.55,        // Fast and demanding (period 1.8s)
     tolerance: 8.0,
-    environment: 'Exosfera · Vórtice de Plasma (3.6x)',
+    environment: 'Exosphere · Plasma Vortex (3.6x)',
     windIntensity: 'strong',
     perfectBonus: 110,
     fitBonus: 55,
@@ -108,10 +108,10 @@ export const FLOOR_SPECS: FloorSpec[] = [
     floorNumber: 6,
     type: 'spire',
     name: 'Starlight Spire Crown',
-    widthClass: 'w-24', // 96px - Aguja cumbre que corona la torre
-    speed: 4.2,         // Clímax veloz y emocionante (período 1.5s)
-    tolerance: 7.0,     // Precisión máxima
-    environment: 'Corona Estelar · Vórtice Máximo (4.2x)',
+    widthClass: 'w-24', // 96px - Apex crown crowning the tower
+    speed: 4.2,         // Fast and thrilling climax (period 1.5s)
+    tolerance: 7.0,     // Maximum precision required
+    environment: 'Starlight Crown · Maximum Vortex (4.2x)',
     windIntensity: 'vortex',
     perfectBonus: 150,
     fitBonus: 75,
@@ -124,7 +124,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
   
   // Turn Taking State: 'player' (Learner) or 'partner' (AstroBot / Peer)
   const [currentTurn, setCurrentTurn] = useState<'player' | 'partner'>('player');
-  const [turnBannerText, setTurnBannerText] = useState<string>('¡TU TURNO! Suelta el Piso 1');
+  const [turnBannerText, setTurnBannerText] = useState<string>('YOUR TURN: Drop Floor 1');
   const [showTurnTransition, setShowTurnTransition] = useState(false);
 
   // Tower Progression (0 to 6 stacked on top of foundation base)
@@ -268,14 +268,14 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         if (isPerfect) {
           const points = spec ? spec.perfectBonus : 50;
           setScore(s => s + points);
-          setFeedbackMessage({ text: `¡PERFECTO! ⭐ +${points}`, type: 'perfect' });
+          setFeedbackMessage({ text: `PERFECT STACK! ⭐ +${points}`, type: 'perfect' });
           try {
             confetti({ particleCount: 40, spread: 65, origin: { y: 0.6 } });
           } catch { /* ignore */ }
         } else {
           const points = spec ? spec.fitBonus : 25;
           setScore(s => s + points);
-          setFeedbackMessage({ text: `¡BUEN ENCAJE! 👍 +${points}`, type: 'good' });
+          setFeedbackMessage({ text: `GREAT FIT! 👍 +${points}`, type: 'good' });
           setIsWobbling(true);
           setTimeout(() => setIsWobbling(false), 700);
         }
@@ -319,10 +319,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           setShowTurnTransition(true);
           setTurnBannerText(
             nextTurn === 'player'
-              ? `¡TU TURNO! Coloca el Piso ${nextFloor + 1}`
+              ? `YOUR TURN: Drop Floor ${nextFloor + 1}`
               : partnerMode === 'bot'
-              ? "TURNO DE ASTROBOT 🤖"
-              : "TURNO DEL COMPAÑERO 👥"
+              ? "ASTROBOT'S TURN 🤖"
+              : "PARTNER'S TURN 👥"
           );
           setTimeout(() => setShowTurnTransition(false), 2000);
         }
@@ -337,7 +337,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           setIsMissed(true);
           setMissRotation(offset > 0 ? 28 : -28);
           soundEngine.playBlockMiss();
-          setFeedbackMessage({ text: '¡FUERA DE LUGAR! ❌ Apunta al centro', type: 'miss' });
+          setFeedbackMessage({ text: 'OFF TARGET! ❌ Aim for the center', type: 'miss' });
           setIsWobbling(true);
           setTimeout(() => setIsWobbling(false), 600);
         }
@@ -422,7 +422,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
     ];
     stackedBlocksRef.current = initialBlocks;
     setStackedBlocks(initialBlocks);
-    setTurnBannerText('¡TU TURNO! Suelta el Piso 1');
+    setTurnBannerText('YOUR TURN: Drop Floor 1');
   };
 
   const isPlayerTurn = currentTurn === 'player';
@@ -452,14 +452,14 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           <div className="flex items-center gap-1.5 bg-[#002833] px-3 py-1 rounded-full border border-white/15">
             <Layers className="w-3.5 h-3.5 text-[#38bdf8]" />
             <span className="text-xs font-black text-white">
-              Pisos: <strong className="text-yellow-300 font-extrabold">{towerHeightCount} / 7</strong>
+              Floors: <strong className="text-yellow-300 font-extrabold">{towerHeightCount} / 7</strong>
             </span>
           </div>
 
           {/* Environmental Velocity Indicator */}
           <div className="hidden lg:flex items-center gap-1.5 bg-[#00242e] px-2.5 py-1 rounded-full border border-cyan-400/20 text-[11px] font-bold text-cyan-200">
             <Gauge className="w-3 h-3 text-[#00f2c9]" />
-            <span>Vel: <strong className="text-yellow-300">{activeFloorSpec.speed.toFixed(1)}x</strong></span>
+            <span>Speed: <strong className="text-yellow-300">{activeFloorSpec.speed.toFixed(1)}x</strong></span>
           </div>
         </div>
 
@@ -474,7 +474,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
               <>
                 <div className="w-2.5 h-2.5 rounded-full bg-[#00f2c9] animate-ping"></div>
                 <span className="text-xs md:text-sm font-black tracking-wide uppercase">
-                  TU TURNO
+                  YOUR TURN
                 </span>
               </>
             ) : (
@@ -485,7 +485,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                   <Users className="w-4 h-4 text-yellow-400" />
                 )}
                 <span className="text-xs md:text-sm font-black tracking-wide uppercase">
-                  {partnerMode === 'bot' ? "TURNO DE ASTROBOT" : "TURNO COMPAÑERO"}
+                  {partnerMode === 'bot' ? "ASTROBOT'S TURN" : "PARTNER'S TURN"}
                 </span>
               </>
             )}
@@ -522,7 +522,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
               }`}
             >
               <Users className="w-3 h-3" />
-              <span>2 Jugadores</span>
+              <span>2 Players</span>
             </button>
           </div>
 
@@ -542,7 +542,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           <div className="absolute top-2 inset-x-0 mx-auto max-w-md z-15 flex items-center justify-center pointer-events-none px-4">
             <div className="bg-[#002029]/90 border border-[#00c9a7]/40 rounded-full px-4 py-1 backdrop-blur-md shadow-lg flex items-center gap-2 text-xs font-black text-white">
               <Sparkles className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-              <span className="text-[#00f2c9]">Piso {currentFloorIndex + 1}/7:</span>
+              <span className="text-[#00f2c9]">Floor {currentFloorIndex + 1}/7:</span>
               <span className="text-yellow-200 truncate">{activeFloorSpec.environment}</span>
             </div>
           </div>
@@ -685,14 +685,14 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           {/* Turn taking instructions prompt */}
           <div className="hidden sm:flex flex-col">
             <span className="text-[10px] font-black uppercase text-[#84cece] tracking-wider">
-              {isPlayerTurn ? 'Acción Requerida' : 'Juego Colaborativo'}
+              {isPlayerTurn ? 'Action Required' : 'Cooperative Waiting'}
             </span>
             <span className="text-xs font-black text-white">
               {isPlayerTurn 
-                ? `¡Suelta el Piso ${currentFloorIndex + 1} cuando esté centrado!` 
+                ? `Drop Floor ${currentFloorIndex + 1} when centered!` 
                 : partnerMode === 'bot' 
-                ? 'Observa a AstroBot colocar el piso...' 
-                : `Pasa el iPad al compañero para el Piso ${currentFloorIndex + 1}`}
+                ? 'Watch AstroBot place the next floor...' 
+                : `Hand iPad to partner for Floor ${currentFloorIndex + 1}`}
             </span>
           </div>
 
@@ -707,7 +707,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 <div className="w-9 h-9 rounded-xl bg-slate-950 text-[#00f2c9] flex items-center justify-center shadow text-xl">
                   ⬇️
                 </div>
-                <span>SOLTAR PISO {currentFloorIndex + 1}</span>
+                <span>DROP FLOOR {currentFloorIndex + 1}</span>
               </button>
             ) : partnerMode === 'pass-and-play' ? (
               <button
@@ -718,7 +718,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 <div className="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center shadow text-xl">
                   👥
                 </div>
-                <span>COMPAÑERO: SOLTAR PISO {currentFloorIndex + 1}</span>
+                <span>PARTNER: DROP FLOOR {currentFloorIndex + 1}</span>
               </button>
             ) : (
               /* ACTIVE WAITING STATE FOR ASTROBOT (CLINICAL SKILL 7 & 8) */
@@ -730,11 +730,11 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                   <div className="flex flex-col text-left">
                     <span className="text-xs md:text-sm font-black text-amber-300">
                       {botPhase === 'aiming' 
-                        ? '🎯 ¡AstroBot soltando bloque!' 
-                        : `🤖 AstroBot apuntando... (${botCountdown}s)`}
+                        ? '🎯 AstroBot dropping block!' 
+                        : `🤖 AstroBot aiming... (${botCountdown}s)`}
                     </span>
                     <span className="text-[10px] text-slate-300 font-medium">
-                      Esperando con calma a tu compañero (Práctica de Espera Activa)
+                      Waiting calmly for partner (Active Waiting Practice)
                     </span>
                   </div>
                 </div>
@@ -759,25 +759,25 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
 
             <div className="inline-flex items-center gap-1.5 px-4 py-1 bg-[#8ac926] text-slate-950 rounded-full text-xs font-black uppercase tracking-wider mb-2 shadow">
               <Star className="w-3.5 h-3.5 fill-slate-950" />
-              <span>¡VICTORIA EN EQUIPO!</span>
+              <span>TEAMWORK VICTORY!</span>
             </div>
 
             <h3 className="text-2xl md:text-3xl font-black text-white mb-2">
-              ¡Torre Estelar Completada!
+              Star Tower Completed!
             </h3>
             <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
-              ¡Trabajaron en equipo, dominaron las corrientes cósmicas y elevaron los 7 pisos hasta las estrellas!
+              You worked as a team, mastered cosmic currents, and raised all 7 floors to the stars!
             </p>
 
             {/* Cooperative Turn-Taking Stats */}
             <div className="w-full grid grid-cols-2 gap-3 mb-6">
               <div className="bg-[#002833] border border-cyan-400/30 rounded-2xl p-3 flex flex-col items-center">
-                <span className="text-[10px] font-black uppercase text-[#84cece]">Tus Turnos</span>
-                <span className="text-xl font-black text-[#00f2c9]">{playerTurnsTaken} Pisos</span>
+                <span className="text-[10px] font-black uppercase text-[#84cece]">Your Turns</span>
+                <span className="text-xl font-black text-[#00f2c9]">{playerTurnsTaken} Floors</span>
               </div>
               <div className="bg-[#002833] border border-amber-400/30 rounded-2xl p-3 flex flex-col items-center">
-                <span className="text-[10px] font-black uppercase text-[#84cece]">Turnos Compañero</span>
-                <span className="text-xl font-black text-yellow-300">{partnerTurnsTaken} Pisos</span>
+                <span className="text-[10px] font-black uppercase text-[#84cece]">Partner Turns</span>
+                <span className="text-xl font-black text-yellow-300">{partnerTurnsTaken} Floors</span>
               </div>
             </div>
 
@@ -788,7 +788,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 className="w-full py-4 bg-gradient-to-r from-[#00f2c9] to-[#00b4d8] hover:from-[#38ef7d] hover:to-[#11998e] active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/30 transition-all border-2 border-white cursor-pointer"
               >
                 <RotateCcw className="w-5 h-5" />
-                <span>Construir Otra Torre</span>
+                <span>Build Another Tower</span>
               </button>
 
               <button
@@ -799,7 +799,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 className="w-full py-3.5 bg-[#002732] hover:bg-[#001f28] active:scale-98 text-[#00f2c9] rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border border-[#00c9a7]/40 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Volver al Menú de Misiones</span>
+                <span>Return to Mission Hub</span>
               </button>
             </div>
           </div>
