@@ -241,7 +241,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
       setTrackItems(prevItems => {
         const itemSpeed = currentEra.itemSpeed * (speedBoost ? 1.25 : 1.0);
         let scoreGain = 0;
-        let relicsGained = 0;
+        let relicsDelta = 0;
         const currentLane = playerLaneRef.current;
 
         const updated = prevItems
@@ -254,7 +254,7 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
                 const isTargetRelic = item.itemType === currentEra.targetItemType;
                 if (isTargetRelic) {
                   scoreGain += 50;
-                  relicsGained += 1;
+                  relicsDelta += 1;
                   soundEngine.playGemPop();
                   triggerFeedback('+50 ⭐ Relic!', currentLane, 'collect');
                 } else {
@@ -265,7 +265,8 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
                 return { ...item, y: nextY, collected: true };
               } else {
                 soundEngine.playGlitch();
-                triggerFeedback('⚡ GLITCH!', currentLane, 'glitch');
+                relicsDelta -= 1;
+                triggerFeedback('⚡ -1 GLITCH!', currentLane, 'glitch');
                 return { ...item, y: nextY, collected: true };
               }
             }
@@ -303,18 +304,19 @@ export const TimeWarpGame = ({ onExit }: TimeWarpGameProps) => {
 
         if (scoreGain > 0) {
           setScore(s => s + scoreGain);
-          if (relicsGained > 0) {
-            setRelicsCount(prev => {
-              const nextRelics = Math.min(currentEra.targetRelics, prev + relicsGained);
-              if (nextRelics >= currentEra.targetRelics && prev < currentEra.targetRelics) {
-                soundEngine.playSuccess();
-                try {
-                  confetti({ particleCount: 60, spread: 80, origin: { y: 0.4 } });
-                } catch { /* ignore */ }
-              }
-              return nextRelics;
-            });
-          }
+        }
+
+        if (relicsDelta !== 0) {
+          setRelicsCount(prev => {
+            const nextRelics = Math.max(0, Math.min(currentEra.targetRelics, prev + relicsDelta));
+            if (nextRelics >= currentEra.targetRelics && prev < currentEra.targetRelics) {
+              soundEngine.playSuccess();
+              try {
+                confetti({ particleCount: 60, spread: 80, origin: { y: 0.4 } });
+              } catch { /* ignore */ }
+            }
+            return nextRelics;
+          });
         }
 
         return updated;
