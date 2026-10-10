@@ -470,20 +470,45 @@ class SoundEngine {
     }
   }
 
-  // Salida de voz AAC real (Web Speech API)
+  // Natural human speech audio playback for AAC words & sentences
   public speakAac(text: string) {
     if (this.isMuted) return;
+
+    const normalized = text.trim().toLowerCase().replace(/\s+/g, '_');
+    const audioPath = normalized.includes('_') 
+      ? `/audio/aac/sentence_${normalized}.mp3` 
+      : `/audio/aac/${normalized}.mp3`;
+
+    try {
+      const audio = new Audio(audioPath);
+      audio.volume = 0.95;
+      audio.play().catch(() => {
+        // Fallback to Web Speech API
+        this.fallbackWebSpeech(text);
+      });
+    } catch {
+      this.fallbackWebSpeech(text);
+    }
+  }
+
+  private fallbackWebSpeech(text: string) {
     try {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.pitch = 1.1; // Friendly warm speech synthesizer pitch
+        const voices = window.speechSynthesis.getVoices();
+        const naturalVoice = voices.find(v => 
+          v.lang.startsWith('en') && 
+          (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Ava') || v.name.includes('Ana'))
+        );
+        if (naturalVoice) utterance.voice = naturalVoice;
+        utterance.rate = 0.92;
+        utterance.pitch = 1.05;
         utterance.lang = 'en-US';
         window.speechSynthesis.speak(utterance);
       }
     } catch {
-      // Silencioso
+      // Silent
     }
   }
 }

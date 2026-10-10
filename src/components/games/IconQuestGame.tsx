@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti';
 import { soundEngine } from '../../utils/audio';
 import { CosmicBackground } from '../CosmicBackground';
 import { 
-  AacIconGlyph, 
+  AacCardImage,
   AacSymbolId, 
   AAC_SYMBOLS_MAP 
 } from './AacIconGlyph';
@@ -512,9 +512,11 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
                 return (
                   <div 
                     key={idx} 
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 ${sym.borderColor} ${sym.bgColor} shadow animate-scaleIn`}
+                    className={`flex items-center gap-2 px-2.5 py-1 rounded-xl border-2 ${sym.borderColor} bg-slate-900/90 shadow-md animate-scaleIn`}
                   >
-                    <AacIconGlyph symbolId={symbolId} size={24} />
+                    <div className="w-7 h-7 rounded-lg overflow-hidden border border-white/20 shrink-0 bg-slate-800">
+                      <AacCardImage symbolId={symbolId} />
+                    </div>
                     <span className={`text-xs md:text-sm font-black tracking-wide ${sym.textColor}`}>
                       {sym.label}
                     </span>
@@ -563,46 +565,47 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
               <button
                 key={symbolId}
                 onClick={() => handleSymbolTap(symbolId)}
-                className={`relative rounded-2xl md:rounded-3xl border-3 flex flex-col items-center justify-between p-1.5 md:p-2.5 transition-all duration-150 active:scale-90 cursor-pointer select-none shadow-lg ${
+                className={`group relative rounded-2xl md:rounded-3xl border-3 flex flex-col items-center justify-between p-1 md:p-1.5 transition-all duration-150 active:scale-90 cursor-pointer select-none shadow-lg overflow-hidden ${
                   sym.bgColor
                 } ${
                   isFullGuide
                     ? 'border-yellow-300 ring-4 ring-yellow-400/80 shadow-[0_0_30px_rgba(250,204,21,0.8)] scale-105 z-30 animate-pulse'
                     : isPartialGuide
                     ? 'border-cyan-300 ring-2 ring-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.5)] z-20'
-                    : `${sym.borderColor} hover:border-white/80 opacity-90 hover:opacity-100`
+                    : `${sym.borderColor} hover:border-white/80 opacity-95 hover:opacity-100`
                 }`}
               >
                 {/* Upper Label Banner */}
-                <span className={`text-[11px] md:text-xs font-black uppercase tracking-wider ${sym.textColor}`}>
-                  {sym.label}
-                </span>
+                <div className="w-full text-center py-0.5 px-1 bg-black/40 backdrop-blur-xs rounded-md border border-white/10 z-10 shrink-0">
+                  <span className={`text-[10px] md:text-xs font-black uppercase tracking-wider ${sym.textColor}`}>
+                    {sym.label}
+                  </span>
+                </div>
 
-                {/* Center Vector Icon */}
-                <div className="flex-1 flex items-center justify-center w-full py-0.5">
-                  <AacIconGlyph 
+                {/* Center 3D Pixar Illustrated Card */}
+                <div className="flex-1 w-full my-0.5 md:my-1 rounded-lg md:rounded-xl overflow-hidden border border-white/15 shadow-inner bg-slate-900/60 flex items-center justify-center relative min-h-0">
+                  <AacCardImage 
                     symbolId={symbolId} 
-                    size="100%" 
-                    className="max-h-11 md:max-h-14 max-w-14" 
+                    className="transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
 
                 {/* Category Pill Tag */}
-                <div className="w-full flex items-center justify-center">
+                <div className="w-full flex items-center justify-center z-10 shrink-0">
                   <div className={`w-8 md:w-10 h-1 rounded-full ${
                     sym.category === 'verb'
-                      ? 'bg-emerald-400/60'
+                      ? 'bg-emerald-400/80'
                       : sym.category === 'social'
-                      ? 'bg-rose-400/60'
+                      ? 'bg-rose-400/80'
                       : sym.category === 'modifier'
-                      ? 'bg-blue-400/60'
-                      : 'bg-amber-400/60'
-                  }`}></div>
+                      ? 'bg-blue-400/80'
+                      : 'bg-amber-400/80'
+                  }`} />
                 </div>
 
                 {/* FULL GUIDANCE HOLOGRAPHIC POINTER BADGE (ABA SKILL 10 TARGET) */}
                 {isFullGuide && (
-                  <div className="absolute -top-3.5 -right-2.5 bg-yellow-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full shadow-xl flex items-center gap-1 animate-bounce border-2 border-slate-950">
+                  <div className="absolute -top-3.5 -right-2.5 bg-yellow-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full shadow-xl flex items-center gap-1 animate-bounce border-2 border-slate-950 z-30">
                     <Hand className="w-3 h-3" />
                     <span>TOUCH</span>
                   </div>

@@ -296,3 +296,44 @@ export const AacIconGlyph: React.FC<AacIconGlyphProps> = ({ symbolId, size = 48,
       return null;
   }
 };
+
+// Map of AAC symbol IDs to their high-resolution 3D Pixar-style flashcard illustrations
+export const AAC_IMAGE_CARDS: Record<AacSymbolId, string> = {
+  want: '/cards/aac/want.jpg',
+  go: '/cards/aac/go.jpg',
+  open: '/cards/aac/open.jpg',
+  play: '/cards/aac/play.jpg',
+  look: '/cards/aac/look.jpg',
+  help: '/cards/aac/help.jpg',
+  stop: '/cards/aac/stop.jpg',
+  more: '/cards/aac/more.jpg',
+  please: '/cards/aac/please.jpg',
+  star: '/cards/aac/star.jpg',
+  crystal: '/cards/aac/crystal.jpg',
+  bridge: '/cards/aac/bridge.jpg',
+  gate: '/cards/aac/open.jpg',
+};
+
+interface AacCardImageProps {
+  symbolId: AacSymbolId;
+  className?: string;
+}
+
+export const AacCardImage: React.FC<AacCardImageProps> = ({ symbolId, className = '' }) => {
+  const [hasError, setHasError] = React.useState(false);
+  const src = AAC_IMAGE_CARDS[symbolId];
+
+  if (!src || hasError) {
+    return <AacIconGlyph symbolId={symbolId} size="100%" className={className} />;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={AAC_SYMBOLS_MAP[symbolId]?.label || symbolId}
+      onError={() => setHasError(true)}
+      className={`w-full h-full object-cover select-none pointer-events-none ${className}`}
+      loading="lazy"
+    />
+  );
+};
