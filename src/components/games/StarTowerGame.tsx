@@ -23,7 +23,7 @@ interface StarTowerGameProps {
 interface StackedBlock {
   id: number;
   type: TowerBlockType;
-  x: number; // percentage (0 - 100)
+  x: number; // percentage (0 - 100) inside playfield column
   placedBy: 'player' | 'partner';
   offsetFromCenter: number;
 }
@@ -42,12 +42,12 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
   // Game mode: 'bot' (AstroBot co-op) or 'pass-and-play' (2 human players sharing iPad)
   const [partnerMode, setPartnerMode] = useState<'bot' | 'pass-and-play'>('bot');
   
-  // Turn Taking State: 'player' (Alex) or 'partner' (AstroBot / RBT)
+  // Turn Taking State: 'player' (Learner) or 'partner' (AstroBot / Peer)
   const [currentTurn, setCurrentTurn] = useState<'player' | 'partner'>('player');
-  const [turnBannerText, setTurnBannerText] = useState<string>('YOUR TURN: Drop Block 1!');
+  const [turnBannerText, setTurnBannerText] = useState<string>('¡TU TURNO! Suelta el Piso 1');
   const [showTurnTransition, setShowTurnTransition] = useState(false);
 
-  // Tower Progression (0 to 7 floors)
+  // Tower Progression (0 to 6 stacked on top of foundation base)
   const [currentFloorIndex, setCurrentFloorIndex] = useState(0);
   const [stackedBlocks, setStackedBlocks] = useState<StackedBlock[]>([
     {
@@ -62,23 +62,32 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
   const [isVictory, setIsVictory] = useState(false);
 
   // Crane & Physics State
-  const [craneX, setCraneX] = useState(50); // % of arena width
+  const [craneX, setCraneX] = useState(50); // % inside playfield column (25% to 75%)
   const [isDropping, setIsDropping] = useState(false);
-  const [droppedBlockY, setDroppedBlockY] = useState(15); // % from top
+  const [droppedBlockY, setDroppedBlockY] = useState(16); // % from top
   const [droppedBlockX, setDroppedBlockX] = useState(50);
+  const [isMissed, setIsMissed] = useState(false);
+  const [missRotation, setMissRotation] = useState(0);
   const [isWobbling, setIsWobbling] = useState(false);
 
-  // Feedback popup
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  // Feedback banner popup
+  const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: 'perfect' | 'good' | 'miss' } | null>(null);
+
+  // AstroBot Co-Op Timing & State
+  const [botPhase, setBotPhase] = useState<'idle' | 'waiting' | 'aiming' | 'dropping'>('idle');
+  const [botCountdown, setBotCountdown] = useState(2);
 
   // Stats for Turn Taking Clinical Verification
   const [playerTurnsTaken, setPlayerTurnsTaken] = useState(0);
   const [partnerTurnsTaken, setPartnerTurnsTaken] = useState(0);
 
-  // Animation Refs
-  const animationFrameRef = useRef<number | null>(null);
+  // Mutable animation refs (immune to stale closures and 60 FPS re-render cycles)
+  const craneXRef = useRef(50);
   const isDroppingRef = useRef(false);
   const currentTurnRef = useRef<'player' | 'partner'>('player');
+  const currentFloorIndexRef = useRef(0);
+  const stackedBlocksRef = useRef<StackedBlock[]>(stackedBlocks);
+  const botReadyToDropRef = useRef(false);
 
   useEffect(() => {
     isDroppingRef.current = isDropping;
@@ -88,161 +97,230 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
     currentTurnRef.current = currentTurn;
   }, [currentTurn]);
 
-  // Current block to be placed (Floor 1 to 6, since 0 is base foundation)
+  useEffect(() => {
+    currentFloorIndexRef.current = currentFloorIndex;
+  }, [currentFloorIndex]);
+
+  useEffect(() => {
+    stackedBlocksRef.current = stackedBlocks;
+  }, [stackedBlocks]);
+
+  // Current block to be placed (Floor 1 to 6)
   const activeBlockConfig = TOWER_SEQUENCE[Math.min(currentFloorIndex + 1, TOWER_SEQUENCE.length - 1)];
 
-  // Crane Oscillation Loop
+  // 1. Crane Oscillation Loop (Smooth sine wave between 24% and 76%)
   useEffect(() => {
     if (isVictory) return;
 
     let startTime = performance.now();
+    let animationFrameId: number;
 
     const loop = (timestamp: number) => {
       const elapsed = (timestamp - startTime) / 1000;
       
-      // Swing between 20% and 80% smoothly
       if (!isDroppingRef.current) {
-        const speed = 1.3 + currentFloorIndex * 0.12;
-        const newX = 50 + Math.sin(elapsed * speed) * 30;
+        const speed = 1.25 + currentFloorIndexRef.current * 0.1;
+        // Oscillates between 24% and 76% (center is 50%)
+        const newX = 50 + Math.sin(elapsed * speed) * 26;
+        craneXRef.current = newX;
         setCraneX(newX);
+
+        // Check if AstroBot is ready to trigger its drop near center
+        if (botReadyToDropRef.current && currentTurnRef.current === 'partner') {
+          const lastBlock = stackedBlocksRef.current[stackedBlocksRef.current.length - 1];
+          const targetX = lastBlock ? lastBlock.x : 50;
+          if (Math.abs(newX - targetX) <= 5.5) {
+            botReadyToDropRef.current = false;
+            setBotPhase('dropping');
+            handleDropBlock();
+          }
+        }
       }
 
-      animationFrameRef.current = requestAnimationFrame(loop);
+      animationFrameId = requestAnimationFrame(loop);
     };
 
-    animationFrameRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, [currentFloorIndex, isVictory]);
+    animationFrameId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isVictory]);
 
-  // Trigger Action to Drop Block
-  const handleDropBlock = useCallback(() => {
-    if (isDropping || isVictory) return;
+  // 2. Trigger Action to Drop Block (Works for both Human and AstroBot)
+  const handleDropBlock = useCallback((forcedX?: number) => {
+    if (isDroppingRef.current || isVictory) return;
 
+    const dropX = forcedX !== undefined ? forcedX : craneXRef.current;
     soundEngine.playBlockDrop();
+
+    isDroppingRef.current = true;
     setIsDropping(true);
-    setDroppedBlockX(craneX);
-    setDroppedBlockY(18);
+    setIsMissed(false);
+    setDroppedBlockX(dropX);
+    setDroppedBlockY(16);
 
-    // Gravity Drop Animation (approx 550ms)
-    let dropProgress = 18;
-    const dropInterval = window.setInterval(() => {
-      dropProgress += 7;
-      setDroppedBlockY(dropProgress);
+    const lastBlock = stackedBlocksRef.current[stackedBlocksRef.current.length - 1];
+    const targetX = lastBlock ? lastBlock.x : 50;
+    const offset = dropX - targetX;
+    const absOffset = Math.abs(offset);
 
-      // Target landing height based on current tower height
-      // Each block sits on top of the previous
-      const targetLandingY = 64 - currentFloorIndex * 7;
+    // Stacking tolerance threshold: within 11.5% of center is a valid landing
+    const isHit = absOffset <= 11.5;
+    const targetLandingY = 64 - currentFloorIndexRef.current * 7.5;
 
-      if (dropProgress >= targetLandingY) {
-        window.clearInterval(dropInterval);
-        
-        // Stacking evaluation
-        const lastBlock = stackedBlocks[stackedBlocks.length - 1];
-        const offset = droppedBlockX - (lastBlock ? lastBlock.x : 50);
-        const absOffset = Math.abs(offset);
+    let currentY = 16;
+    const dropTimer = window.setInterval(() => {
+      currentY += 7.5;
+      setDroppedBlockY(currentY);
 
-        // Success threshold
-        if (absOffset <= 24) {
-          const isPerfect = absOffset <= 8;
-          soundEngine.playBlockLand(1 + currentFloorIndex * 0.08);
+      if (isHit && currentY >= targetLandingY) {
+        // === SUCCESSFUL STACK ===
+        window.clearInterval(dropTimer);
 
-          if (isPerfect) {
-            setScore(s => s + 50);
-            setFeedbackMessage('PERFECT STACK! ⭐ +50');
-            try {
-              confetti({ particleCount: 35, spread: 60, origin: { x: droppedBlockX / 100, y: 0.6 } });
-            } catch { /* ignore */ }
-          } else {
-            setScore(s => s + 25);
-            setFeedbackMessage('GREAT FIT! 👍 +25');
-            setIsWobbling(true);
-            setTimeout(() => setIsWobbling(false), 800);
-          }
+        const isPerfect = absOffset <= 4;
+        soundEngine.playBlockLand(1 + currentFloorIndexRef.current * 0.08);
 
-          // Register newly stacked block
-          const newBlock: StackedBlock = {
-            id: Date.now(),
-            type: activeBlockConfig.type,
-            x: isPerfect ? (lastBlock ? lastBlock.x : 50) : droppedBlockX,
-            placedBy: currentTurnRef.current,
-            offsetFromCenter: offset,
-          };
-
-          setStackedBlocks(prev => [...prev, newBlock]);
-
-          if (currentTurnRef.current === 'player') {
-            setPlayerTurnsTaken(p => p + 1);
-          } else {
-            setPartnerTurnsTaken(p => p + 1);
-          }
-
-          const nextFloor = currentFloorIndex + 1;
-          setCurrentFloorIndex(nextFloor);
-
-          // Check Win Condition (All 6 floors built on top of base)
-          if (nextFloor >= 6) {
-            setIsVictory(true);
-            soundEngine.playSuccess();
-            try {
-              confetti({ particleCount: 100, spread: 100, origin: { y: 0.4 } });
-            } catch { /* ignore */ }
-          } else {
-            // SWITCH TURN (The Core Clinical Skill!)
-            const nextTurn = currentTurnRef.current === 'player' ? 'partner' : 'player';
-            setCurrentTurn(nextTurn);
-            soundEngine.playTurnChime(nextTurn === 'player');
-            setShowTurnTransition(true);
-            setTurnBannerText(
-              nextTurn === 'player'
-                ? 'YOUR TURN! Drop Floor ' + (nextFloor + 1)
-                : partnerMode === 'bot'
-                ? "ASTROBOT'S TURN: Waiting..."
-                : "PARTNER'S TURN: Pass iPad!"
-            );
-            setTimeout(() => setShowTurnTransition(false), 2000);
-          }
+        if (isPerfect) {
+          setScore(s => s + 50);
+          setFeedbackMessage({ text: '¡PERFECTO! ⭐ +50', type: 'perfect' });
+          try {
+            confetti({ particleCount: 35, spread: 60, origin: { y: 0.6 } });
+          } catch { /* ignore */ }
         } else {
-          // Gentle Magnetic Catch (Low-Frustration Errorless Learning)
-          soundEngine.playTap();
-          setFeedbackMessage('TRACTOR BEAM REPOSITION! 🧲');
+          setScore(s => s + 25);
+          setFeedbackMessage({ text: '¡BUEN ENCAJE! 👍 +25', type: 'good' });
+          setIsWobbling(true);
+          setTimeout(() => setIsWobbling(false), 700);
+        }
+
+        const finalX = isPerfect ? targetX : dropX;
+        const newBlock: StackedBlock = {
+          id: Date.now(),
+          type: activeBlockConfig.type,
+          x: finalX,
+          placedBy: currentTurnRef.current,
+          offsetFromCenter: finalX - 50,
+        };
+
+        const updatedBlocks = [...stackedBlocksRef.current, newBlock];
+        stackedBlocksRef.current = updatedBlocks;
+        setStackedBlocks(updatedBlocks);
+
+        if (currentTurnRef.current === 'player') {
+          setPlayerTurnsTaken(p => p + 1);
+        } else {
+          setPartnerTurnsTaken(p => p + 1);
+        }
+
+        const nextFloor = currentFloorIndexRef.current + 1;
+        currentFloorIndexRef.current = nextFloor;
+        setCurrentFloorIndex(nextFloor);
+
+        if (nextFloor >= 6) {
+          setIsVictory(true);
+          soundEngine.playSuccess();
+          try {
+            confetti({ particleCount: 100, spread: 100, origin: { y: 0.4 } });
+          } catch { /* ignore */ }
+        } else {
+          // Switch Turn
+          const nextTurn = currentTurnRef.current === 'player' ? 'partner' : 'player';
+          currentTurnRef.current = nextTurn;
+          setCurrentTurn(nextTurn);
+          soundEngine.playTurnChime(nextTurn === 'player');
+          setShowTurnTransition(true);
+          setTurnBannerText(
+            nextTurn === 'player'
+              ? `¡TU TURNO! Coloca el Piso ${nextFloor + 1}`
+              : partnerMode === 'bot'
+              ? "TURNO DE ASTROBOT 🤖"
+              : "TURNO DEL COMPAÑERO 👥"
+          );
+          setTimeout(() => setShowTurnTransition(false), 2000);
+        }
+
+        isDroppingRef.current = false;
+        setIsDropping(false);
+        setTimeout(() => setFeedbackMessage(null), 1500);
+
+      } else if (!isHit && currentY >= targetLandingY) {
+        // === MISSED DROP: TUMBLE & FALL OFF SCREEN ===
+        if (!isMissed) {
+          setIsMissed(true);
+          setMissRotation(offset > 0 ? 28 : -28);
+          soundEngine.playBlockMiss();
+          setFeedbackMessage({ text: '¡FUERA DE LUGAR! ❌ Apunta al centro', type: 'miss' });
           setIsWobbling(true);
           setTimeout(() => setIsWobbling(false), 600);
         }
 
-        setIsDropping(false);
-        setTimeout(() => setFeedbackMessage(null), 1400);
+        // Keep falling past bottom of screen
+        if (currentY >= 105) {
+          window.clearInterval(dropTimer);
+          isDroppingRef.current = false;
+          setIsDropping(false);
+          setIsMissed(false);
+          setTimeout(() => setFeedbackMessage(null), 1600);
+        }
       }
     }, 28);
-  }, [isDropping, isVictory, craneX, currentFloorIndex, stackedBlocks, droppedBlockX, activeBlockConfig, partnerMode]);
+  }, [isVictory, activeBlockConfig, partnerMode]);
 
-  // AstroBot Turn Autopilot (Simulating Cooperative Partner)
+  // 3. Bulletproof AstroBot Turn Lifecycle (Immune to 60 FPS RAF cancellations)
   useEffect(() => {
-    if (isVictory || partnerMode !== 'bot' || currentTurn !== 'partner' || isDropping) return;
+    if (isVictory || partnerMode !== 'bot' || currentTurn !== 'partner') {
+      setBotPhase('idle');
+      botReadyToDropRef.current = false;
+      return;
+    }
 
-    // Active Waiting: Wait 2.2 seconds before AstroBot acts
-    // This gives the child a tangible, measurable window to practice Delay Tolerance (waiting without distress)
-    const botTimer = window.setTimeout(() => {
-      if (currentTurnRef.current === 'partner' && !isDroppingRef.current) {
-        handleDropBlock();
+    setBotPhase('waiting');
+    setBotCountdown(2);
+
+    // Active Waiting Delay Tolerance Practice (Count down 2s -> 1s -> Aim/Drop)
+    const timer1 = window.setTimeout(() => {
+      setBotCountdown(1);
+    }, 1000);
+
+    const timer2 = window.setTimeout(() => {
+      setBotCountdown(0);
+      setBotPhase('aiming');
+      botReadyToDropRef.current = true;
+    }, 2000);
+
+    // Safety Fallback: Force drop if crane didn't cross window within 3.6s
+    const fallbackTimer = window.setTimeout(() => {
+      if (currentTurnRef.current === 'partner' && !isDroppingRef.current && botReadyToDropRef.current) {
+        botReadyToDropRef.current = false;
+        setBotPhase('dropping');
+        const lastBlock = stackedBlocksRef.current[stackedBlocksRef.current.length - 1];
+        const targetX = lastBlock ? lastBlock.x : 50;
+        handleDropBlock(targetX + (Math.random() * 4 - 2));
       }
-    }, 2200);
+    }, 3600);
 
-    return () => window.clearTimeout(botTimer);
-  }, [currentTurn, partnerMode, isVictory, isDropping, handleDropBlock]);
+    return () => {
+      window.clearTimeout(timer1);
+      window.clearTimeout(timer2);
+      window.clearTimeout(fallbackTimer);
+      botReadyToDropRef.current = false;
+    };
+  }, [currentTurn, partnerMode, isVictory, handleDropBlock]);
 
   // Restart Tower
   const handleRestart = () => {
     soundEngine.playTap();
+    currentFloorIndexRef.current = 0;
     setCurrentFloorIndex(0);
+    currentTurnRef.current = 'player';
     setCurrentTurn('player');
     setIsVictory(false);
+    isDroppingRef.current = false;
     setIsDropping(false);
+    setIsMissed(false);
     setScore(0);
     setPlayerTurnsTaken(0);
     setPartnerTurnsTaken(0);
-    setStackedBlocks([
+    setBotPhase('idle');
+    const initialBlocks: StackedBlock[] = [
       {
         id: 0,
         type: 'foundation',
@@ -250,8 +328,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         placedBy: 'player',
         offsetFromCenter: 0,
       }
-    ]);
-    setTurnBannerText('YOUR TURN: Drop Floor 1!');
+    ];
+    stackedBlocksRef.current = initialBlocks;
+    setStackedBlocks(initialBlocks);
+    setTurnBannerText('¡TU TURNO! Suelta el Piso 1');
   };
 
   const isPlayerTurn = currentTurn === 'player';
@@ -281,12 +361,12 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           <div className="flex items-center gap-1.5 bg-[#002833] px-3 py-1 rounded-full border border-white/15">
             <Layers className="w-3.5 h-3.5 text-[#38bdf8]" />
             <span className="text-xs font-black text-white">
-              Floors: <strong className="text-yellow-300 font-extrabold">{towerHeightCount} / 7</strong>
+              Pisos: <strong className="text-yellow-300 font-extrabold">{towerHeightCount} / 7</strong>
             </span>
           </div>
         </div>
 
-        {/* Center: ACTIVE TURN BANNER (SKILLS 7 & 8) */}
+        {/* Center: ACTIVE TURN BANNER (ABA SKILLS 7 & 8) */}
         <div className="flex items-center gap-2">
           <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border-2 transition-all shadow-lg ${
             isPlayerTurn
@@ -295,16 +375,20 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           }`}>
             {isPlayerTurn ? (
               <>
-                <div className="w-3 h-3 rounded-full bg-[#00f2c9] animate-ping"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-[#00f2c9] animate-ping"></div>
                 <span className="text-xs md:text-sm font-black tracking-wide uppercase">
-                  YOUR TURN
+                  TU TURNO
                 </span>
               </>
             ) : (
               <>
-                {partnerMode === 'bot' ? <Bot className="w-4 h-4 text-yellow-400 animate-spin" style={{ animationDuration: '6s' }} /> : <Users className="w-4 h-4 text-yellow-400" />}
+                {partnerMode === 'bot' ? (
+                  <Bot className="w-4 h-4 text-yellow-400 animate-spin" style={{ animationDuration: '6s' }} />
+                ) : (
+                  <Users className="w-4 h-4 text-yellow-400" />
+                )}
                 <span className="text-xs md:text-sm font-black tracking-wide uppercase">
-                  {partnerMode === 'bot' ? "ASTROBOT'S TURN" : "PARTNER'S TURN"}
+                  {partnerMode === 'bot' ? "TURNO DE ASTROBOT" : "TURNO COMPAÑERO"}
                 </span>
               </>
             )}
@@ -313,7 +397,6 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
 
         {/* Right: Partner Mode Selector & Score */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Mode Switcher Toggle */}
           <div className="hidden sm:flex items-center bg-[#00242e] rounded-full p-0.5 border border-white/10">
             <button
               onClick={() => {
@@ -342,7 +425,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
               }`}
             >
               <Users className="w-3 h-3" />
-              <span>2 Players</span>
+              <span>2 Jugadores</span>
             </button>
           </div>
 
@@ -353,117 +436,130 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         </div>
       </div>
 
-      {/* MAIN CONSTRUCTION ARENA */}
+      {/* MAIN CONSTRUCTION ARENA - Unified Coordinate Column */}
       <div className="flex-1 relative overflow-hidden flex flex-col justify-between">
-        {/* Sky Clouds / Goal Spire in the stratosphere */}
-        <div className="absolute top-2 inset-x-0 mx-auto max-w-md z-15 flex items-center justify-center pointer-events-none px-4">
-          <div className="bg-[#002029]/85 border border-[#00c9a7]/40 rounded-full px-4 py-1 backdrop-blur-md shadow flex items-center gap-2 text-xs font-black text-white">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-            <span>Target: Stack 7 Floors to reach the Starlight Crown!</span>
-          </div>
-        </div>
-
-        {/* FEEDBACK POPUP (+50 / +25 / REPOSITION) */}
-        {feedbackMessage && (
-          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-slate-950/90 border-2 border-yellow-400 text-yellow-300 font-black px-6 py-2 rounded-full shadow-2xl animate-bounce text-sm uppercase tracking-wider">
-            {feedbackMessage}
-          </div>
-        )}
-
-        {/* TURN TRANSITION CELEBRATION BANNER */}
-        {showTurnTransition && (
-          <div className={`absolute top-24 left-1/2 -translate-x-1/2 z-40 px-6 py-2.5 rounded-2xl shadow-2xl border-2 font-black text-xs md:text-sm uppercase tracking-wider animate-fadeIn flex items-center gap-2 ${
-            isPlayerTurn
-              ? 'bg-emerald-600 text-white border-emerald-300'
-              : 'bg-amber-600 text-white border-amber-300'
-          }`}>
-            <CheckCircle2 className="w-4 h-4 text-white" />
-            <span>{turnBannerText}</span>
-          </div>
-        )}
-
-        {/* OSCILLATING COSMIC CRANE (Top Hanging Mechanism) */}
-        {!isVictory && (
-          <div 
-            className="absolute top-0 w-36 h-28 pointer-events-none z-20 flex flex-col items-center transition-all duration-75"
-            style={{ 
-              left: `${craneX}%`, 
-              transform: 'translateX(-50%)' 
-            }}
-          >
-            {/* Crane cable line */}
-            <div className="w-1 h-10 bg-gradient-to-b from-white to-[#00f2c9] shadow-sm"></div>
-
-            {/* Magnetic Clamp Head */}
-            <div className="w-14 h-4 bg-slate-800 rounded-full border-2 border-[#00f2c9] flex items-center justify-center shadow-lg">
-              <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></div>
+        {/* Playfield Column (Constrained width for identical physics, crane swing and tower base) */}
+        <div className="w-full max-w-lg mx-auto relative flex-1 flex flex-col justify-between overflow-hidden">
+          
+          {/* Target Hint in Stratosphere */}
+          <div className="absolute top-2 inset-x-0 mx-auto max-w-sm z-15 flex items-center justify-center pointer-events-none px-4">
+            <div className="bg-[#002029]/85 border border-[#00c9a7]/40 rounded-full px-4 py-1 backdrop-blur-md shadow flex items-center gap-2 text-xs font-black text-white">
+              <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Construyan 7 Pisos para alcanzar la Corona Estelar</span>
             </div>
+          </div>
 
-            {/* Currently held block (only visible when not dropped) */}
-            {!isDropping && (
-              <div className="w-32 h-16 mt-0.5 filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] animate-pulse-subtle">
-                <TowerBlockIcon 
-                  type={activeBlockConfig.type} 
-                  placedBy={currentTurn} 
-                />
+          {/* DYNAMIC FEEDBACK BANNER (+50 / +25 / MISSED) */}
+          {feedbackMessage && (
+            <div className={`absolute top-12 left-1/2 -translate-x-1/2 z-40 font-black px-5 py-2 rounded-full shadow-2xl animate-bounce text-xs md:text-sm uppercase tracking-wider flex items-center gap-2 border-2 ${
+              feedbackMessage.type === 'perfect'
+                ? 'bg-emerald-950/95 border-emerald-400 text-emerald-300'
+                : feedbackMessage.type === 'good'
+                ? 'bg-amber-950/95 border-amber-400 text-yellow-300'
+                : 'bg-rose-950/95 border-rose-500 text-rose-300'
+            }`}>
+              <span>{feedbackMessage.text}</span>
+            </div>
+          )}
+
+          {/* TURN TRANSITION CELEBRATION BANNER */}
+          {showTurnTransition && (
+            <div className={`absolute top-22 left-1/2 -translate-x-1/2 z-40 px-5 py-2 rounded-2xl shadow-2xl border-2 font-black text-xs md:text-sm uppercase tracking-wider animate-fadeIn flex items-center gap-2 ${
+              isPlayerTurn
+                ? 'bg-emerald-600 text-white border-emerald-300'
+                : 'bg-amber-600 text-white border-amber-300'
+            }`}>
+              <CheckCircle2 className="w-4 h-4 text-white" />
+              <span>{turnBannerText}</span>
+            </div>
+          )}
+
+          {/* OSCILLATING COSMIC CRANE (Hanging Mechanism) */}
+          {!isVictory && (
+            <div 
+              className="absolute top-0 w-36 h-28 pointer-events-none z-20 flex flex-col items-center"
+              style={{ 
+                left: `${craneX}%`, 
+                transform: 'translateX(-50%)' 
+              }}
+            >
+              {/* Crane cable line */}
+              <div className="w-1 h-9 bg-gradient-to-b from-white to-[#00f2c9] shadow-sm"></div>
+
+              {/* Magnetic Clamp Head */}
+              <div className="w-14 h-4 bg-slate-800 rounded-full border-2 border-[#00f2c9] flex items-center justify-center shadow-lg">
+                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* FALLING BLOCK (While Dropping) */}
-        {isDropping && (
-          <div 
-            className="absolute w-32 h-16 pointer-events-none z-25 filter drop-shadow-[0_12px_20px_rgba(0,0,0,0.8)]"
-            style={{ 
-              left: `${droppedBlockX}%`, 
-              top: `${droppedBlockY}%`,
-              transform: 'translateX(-50%)' 
-            }}
-          >
-            <TowerBlockIcon 
-              type={activeBlockConfig.type} 
-              placedBy={currentTurn} 
-            />
-          </div>
-        )}
-
-        {/* THE BUILT STAR TOWER (Anchored at Bottom Platform) */}
-        <div className={`relative flex-1 flex flex-col justify-end items-center pb-8 z-10 transition-transform duration-500 ${
-          isWobbling ? 'animate-wiggle' : ''
-        }`}>
-          {/* Stacked Floors Container */}
-          <div className="flex flex-col-reverse items-center w-full max-w-md relative">
-            {stackedBlocks.map((block, index) => {
-              return (
-                <div 
-                  key={block.id}
-                  className="w-36 h-15 relative flex items-center justify-center transition-all duration-300"
-                  style={{
-                    marginBottom: index === 0 ? 0 : -8, // Slight interlocking overlap
-                    transform: `translateX(${(block.x - 50) * 0.8}px)`,
-                  }}
-                >
+              {/* Currently held block (visible while not dropped) */}
+              {!isDropping && (
+                <div className="w-36 h-16 mt-0.5 filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] animate-pulse-subtle">
                   <TowerBlockIcon 
-                    type={block.type} 
-                    placedBy={block.placedBy} 
+                    type={activeBlockConfig.type} 
+                    placedBy={currentTurn} 
                   />
-
-                  {/* Floor number tag */}
-                  <div className={`absolute -right-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] shadow border ${
-                    block.placedBy === 'player'
-                      ? 'bg-[#00f2c9] text-slate-950 border-white'
-                      : 'bg-[#ffb703] text-slate-950 border-white'
-                  }`}>
-                    {index + 1}
-                  </div>
                 </div>
-              );
-            })}
+              )}
+            </div>
+          )}
 
-            {/* Launchpad Ground Base */}
-            <div className="w-56 h-6 bg-gradient-to-r from-[#00171f] via-[#003442] to-[#00171f] rounded-t-2xl border-t-2 border-[#00c9a7]/50 shadow-2xl flex items-center justify-center">
-              <div className="w-24 h-1 bg-cyan-400/40 rounded-full"></div>
+          {/* FALLING BLOCK (In Motion) */}
+          {isDropping && (
+            <div 
+              className={`absolute w-36 h-16 pointer-events-none z-25 filter drop-shadow-[0_12px_20px_rgba(0,0,0,0.8)] transition-transform duration-150`}
+              style={{ 
+                left: `${droppedBlockX}%`, 
+                top: `${droppedBlockY}%`,
+                transform: isMissed ? `translateX(-50%) rotate(${missRotation}deg)` : 'translateX(-50%)' 
+              }}
+            >
+              <TowerBlockIcon 
+                type={activeBlockConfig.type} 
+                placedBy={currentTurn} 
+              />
+            </div>
+          )}
+
+          {/* THE BUILT STAR TOWER (Anchored at Base) */}
+          <div className={`relative flex-1 flex flex-col justify-end items-center pb-8 z-10 transition-transform duration-500 w-full ${
+            isWobbling ? 'animate-wiggle' : ''
+          }`}>
+            <div className="w-full h-full relative flex flex-col justify-end items-center">
+              {/* Ground Launchpad Base Platform */}
+              <div className="w-56 h-7 bg-gradient-to-r from-[#00171f] via-[#003442] to-[#00171f] rounded-t-2xl border-t-2 border-[#00c9a7]/60 shadow-2xl flex items-center justify-center z-10">
+                <div className="w-24 h-1.5 bg-cyan-400/50 rounded-full animate-pulse"></div>
+              </div>
+
+              {/* Stacked Floors (Positioned using the exact same coordinate system) */}
+              {stackedBlocks.map((block, index) => {
+                const bottomPercent = index * 7.5;
+                return (
+                  <div 
+                    key={block.id}
+                    className="w-36 h-16 absolute flex items-center justify-center transition-all duration-300"
+                    style={{
+                      bottom: `calc(1.75rem + ${bottomPercent}%)`,
+                      left: `${block.x}%`,
+                      transform: 'translateX(-50%)',
+                      zIndex: 10 + index,
+                    }}
+                  >
+                    <TowerBlockIcon 
+                      type={block.type} 
+                      placedBy={block.placedBy} 
+                    />
+
+                    {/* Floor number indicator */}
+                    <div className={`absolute -right-5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] shadow border ${
+                      block.placedBy === 'player'
+                        ? 'bg-[#00f2c9] text-slate-950 border-white'
+                        : 'bg-[#ffb703] text-slate-950 border-white'
+                    }`}>
+                      {index + 1}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -473,14 +569,14 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           {/* Turn taking instructions prompt */}
           <div className="hidden sm:flex flex-col">
             <span className="text-[10px] font-black uppercase text-[#84cece] tracking-wider">
-              {isPlayerTurn ? 'Action Required' : 'Cooperative Waiting'}
+              {isPlayerTurn ? 'Acción Requerida' : 'Juego Colaborativo'}
             </span>
             <span className="text-xs font-black text-white">
               {isPlayerTurn 
-                ? 'Drop when aligned over previous floor!' 
+                ? '¡Suelta el bloque cuando esté sobre la torre!' 
                 : partnerMode === 'bot' 
-                ? 'Watch AstroBot place the next floor...' 
-                : 'Hand iPad to partner for Floor ' + (currentFloorIndex + 1)}
+                ? 'Observa a AstroBot colocar el piso...' 
+                : 'Pasa el iPad al compañero para el siguiente piso'}
             </span>
           </div>
 
@@ -488,37 +584,47 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           <div className="flex-1 max-w-md mx-auto">
             {isPlayerTurn ? (
               <button
-                onClick={handleDropBlock}
+                onClick={() => handleDropBlock()}
                 disabled={isDropping}
-                className="w-full h-16 md:h-18 bg-gradient-to-r from-[#00f2c9] to-[#00b4d8] hover:from-[#38ef7d] hover:to-[#11998e] active:scale-95 text-slate-950 font-black rounded-2xl shadow-xl shadow-cyan-500/30 border-3 border-white flex items-center justify-center gap-3 text-base md:text-lg transition-all cursor-pointer"
+                className="w-full h-16 md:h-18 bg-gradient-to-r from-[#00f2c9] to-[#00b4d8] hover:from-[#38ef7d] hover:to-[#11998e] active:scale-95 text-slate-950 font-black rounded-2xl shadow-xl shadow-cyan-500/30 border-3 border-white flex items-center justify-center gap-3 text-base md:text-lg transition-all cursor-pointer disabled:opacity-50"
               >
-                <div className="w-9 h-9 rounded-xl bg-slate-950 text-[#00f2c9] flex items-center justify-center shadow">
+                <div className="w-9 h-9 rounded-xl bg-slate-950 text-[#00f2c9] flex items-center justify-center shadow text-xl">
                   ⬇️
                 </div>
-                <span>DROP TOWER BLOCK</span>
+                <span>SOLTAR PISO DE LA TORRE</span>
               </button>
             ) : partnerMode === 'pass-and-play' ? (
               <button
-                onClick={handleDropBlock}
+                onClick={() => handleDropBlock()}
                 disabled={isDropping}
-                className="w-full h-16 md:h-18 bg-gradient-to-r from-[#ffb703] to-[#fb8500] hover:from-[#ffc300] hover:to-[#ffa200] active:scale-95 text-slate-950 font-black rounded-2xl shadow-xl shadow-amber-500/30 border-3 border-white flex items-center justify-center gap-3 text-base md:text-lg transition-all cursor-pointer"
+                className="w-full h-16 md:h-18 bg-gradient-to-r from-[#ffb703] to-[#fb8500] hover:from-[#ffc300] hover:to-[#ffa200] active:scale-95 text-slate-950 font-black rounded-2xl shadow-xl shadow-amber-500/30 border-3 border-white flex items-center justify-center gap-3 text-base md:text-lg transition-all cursor-pointer disabled:opacity-50"
               >
-                <div className="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center shadow">
+                <div className="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center shadow text-xl">
                   👥
                 </div>
-                <span>PARTNER: DROP BLOCK</span>
+                <span>COMPAÑERO: SOLTAR PISO</span>
               </button>
             ) : (
               /* ACTIVE WAITING STATE FOR ASTROBOT (CLINICAL SKILL 7 & 8) */
-              <div className="w-full h-16 md:h-18 bg-[#001f28] rounded-2xl border-2 border-dashed border-amber-400/50 flex items-center justify-center gap-3 px-4 shadow-inner">
-                <Bot className="w-7 h-7 text-yellow-400 animate-bounce" />
-                <div className="flex flex-col text-left">
-                  <span className="text-xs md:text-sm font-black text-amber-300">
-                    AstroBot is aiming...
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-semibold">
-                    Tolerating delay: waiting calmly for partner!
-                  </span>
+              <div className="w-full h-16 md:h-18 bg-[#001f28] rounded-2xl border-2 border-dashed border-amber-400/60 flex items-center justify-between px-5 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center">
+                    <Bot className={`w-6 h-6 text-yellow-400 ${botPhase === 'aiming' ? 'animate-pulse' : 'animate-bounce'}`} />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-xs md:text-sm font-black text-amber-300">
+                      {botPhase === 'aiming' 
+                        ? '🎯 ¡AstroBot soltando bloque!' 
+                        : `🤖 AstroBot apuntando... (${botCountdown}s)`}
+                    </span>
+                    <span className="text-[10px] text-slate-300 font-medium">
+                      Esperando con calma a tu compañero (Práctica de Espera Activa)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-10 h-10 rounded-full border-2 border-amber-400/40 flex items-center justify-center bg-slate-950 font-black text-xs text-yellow-300 shadow">
+                  {botPhase === 'aiming' ? '🚀' : `${botCountdown}s`}
                 </div>
               </div>
             )}
@@ -537,25 +643,25 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
 
             <div className="inline-flex items-center gap-1.5 px-4 py-1 bg-[#8ac926] text-slate-950 rounded-full text-xs font-black uppercase tracking-wider mb-2 shadow">
               <Star className="w-3.5 h-3.5 fill-slate-950" />
-              <span>TEAMWORK VICTORY!</span>
+              <span>¡VICTORIA EN EQUIPO!</span>
             </div>
 
             <h3 className="text-2xl md:text-3xl font-black text-white mb-2">
-              Star Tower Completed!
+              ¡Torre Estelar Completada!
             </h3>
             <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
-              You and your partner took turns and raised all 7 cosmic floors to the stars!
+              ¡Trabajaron en equipo, tomaron turnos y elevaron los 7 pisos cósmicos hasta las estrellas!
             </p>
 
             {/* Cooperative Turn-Taking Stats */}
             <div className="w-full grid grid-cols-2 gap-3 mb-6">
               <div className="bg-[#002833] border border-cyan-400/30 rounded-2xl p-3 flex flex-col items-center">
-                <span className="text-[10px] font-black uppercase text-[#84cece]">Your Turns</span>
-                <span className="text-xl font-black text-[#00f2c9]">{playerTurnsTaken} Floors</span>
+                <span className="text-[10px] font-black uppercase text-[#84cece]">Tus Turnos</span>
+                <span className="text-xl font-black text-[#00f2c9]">{playerTurnsTaken} Pisos</span>
               </div>
               <div className="bg-[#002833] border border-amber-400/30 rounded-2xl p-3 flex flex-col items-center">
-                <span className="text-[10px] font-black uppercase text-[#84cece]">Partner Turns</span>
-                <span className="text-xl font-black text-yellow-300">{partnerTurnsTaken} Floors</span>
+                <span className="text-[10px] font-black uppercase text-[#84cece]">Turnos Compañero</span>
+                <span className="text-xl font-black text-yellow-300">{partnerTurnsTaken} Pisos</span>
               </div>
             </div>
 
@@ -563,10 +669,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
             <div className="w-full flex flex-col gap-3">
               <button
                 onClick={handleRestart}
-                className="w-full py-4 bg-gradient-to-r from-[#00f2c9] to-[#00b4d8] hover:from-[#38ef7d] hover:to-[#11998e] active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/30 transition-all border-2 border-white"
+                className="w-full py-4 bg-gradient-to-r from-[#00f2c9] to-[#00b4d8] hover:from-[#38ef7d] hover:to-[#11998e] active:scale-98 text-slate-950 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/30 transition-all border-2 border-white cursor-pointer"
               >
                 <RotateCcw className="w-5 h-5" />
-                <span>Build Another Tower</span>
+                <span>Construir Otra Torre</span>
               </button>
 
               <button
@@ -574,10 +680,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                   soundEngine.playTap();
                   onExit();
                 }}
-                className="w-full py-3.5 bg-[#002732] hover:bg-[#001f28] active:scale-98 text-[#00f2c9] rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border border-[#00c9a7]/40"
+                className="w-full py-3.5 bg-[#002732] hover:bg-[#001f28] active:scale-98 text-[#00f2c9] rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all border border-[#00c9a7]/40 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Return to Mission Hub</span>
+                <span>Volver al Menú de Misiones</span>
               </button>
             </div>
           </div>
