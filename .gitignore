@@ -26,4 +26,8 @@ dist-ssr
 .firebase/
 .atl/
 odd/
+test-results/
+playwright-report/
+.playwright/
+
 

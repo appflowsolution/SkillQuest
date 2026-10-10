@@ -10,6 +10,6 @@ export default defineConfig({
   ],
   server: {
     host: true, // Permite conectarse desde el iPad en la red local
-    port: 5173,
+    port: 5180,
   },
 });
