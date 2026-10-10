@@ -12,7 +12,8 @@ import {
   RotateCcw, 
   Award, 
   CheckCircle2, 
-  Layers
+  Layers,
+  Gauge
 } from 'lucide-react';
 
 interface StarTowerGameProps {
@@ -23,19 +24,98 @@ interface StarTowerGameProps {
 interface StackedBlock {
   id: number;
   type: TowerBlockType;
+  widthClass: string;
   x: number; // percentage (0 - 100) inside playfield column
   placedBy: 'player' | 'partner';
   offsetFromCenter: number;
 }
 
-const TOWER_SEQUENCE: { type: TowerBlockType; name: string }[] = [
-  { type: 'foundation', name: 'Obsidian Foundation' },
-  { type: 'habitat', name: 'Crystal Habitat' },
-  { type: 'reactor', name: 'Starlight Reactor' },
-  { type: 'greenhouse', name: 'Cosmic Bio-Dome' },
-  { type: 'observatory', name: 'Sky Observatory' },
-  { type: 'solarsails', name: 'Plasma Solar Wings' },
-  { type: 'spire', name: 'Starlight Spire Crown' },
+export interface FloorSpec {
+  floorNumber: number;
+  type: TowerBlockType;
+  name: string;
+  widthClass: string;   // Tapering width: w-44 -> w-40 -> w-36 -> w-32 -> w-28 -> w-24
+  speed: number;        // Crane oscillation speed in rad/s (1.35x -> 4.2x)
+  tolerance: number;    // Landing tolerance threshold in % (14% -> 7%)
+  environment: string;  // Altitude & atmospheric name
+  windIntensity: 'none' | 'light' | 'moderate' | 'strong' | 'vortex';
+  perfectBonus: number; // Scaled points for perfect drops
+  fitBonus: number;     // Scaled points for standard fits
+}
+
+export const FLOOR_SPECS: FloorSpec[] = [
+  {
+    floorNumber: 1,
+    type: 'habitat',
+    name: 'Crystal Habitat',
+    widthClass: 'w-44', // 176px - Base amplia para dominar el timing inicial
+    speed: 1.35,        // Período suave de 4.6s
+    tolerance: 14.0,    // Gran margen de éxito
+    environment: 'Superficie Cósmica · Viento Calmo (1.3x)',
+    windIntensity: 'none',
+    perfectBonus: 50,
+    fitBonus: 25,
+  },
+  {
+    floorNumber: 2,
+    type: 'reactor',
+    name: 'Starlight Reactor',
+    widthClass: 'w-40', // 160px
+    speed: 1.85,        // +37% más dinámico (período 3.4s)
+    tolerance: 12.0,
+    environment: 'Troposfera · Brisa Ligera (1.8x)',
+    windIntensity: 'light',
+    perfectBonus: 60,
+    fitBonus: 30,
+  },
+  {
+    floorNumber: 3,
+    type: 'greenhouse',
+    name: 'Cosmic Bio-Dome',
+    widthClass: 'w-36', // 144px
+    speed: 2.4,         // Ritmo medio acelerado (período 2.6s)
+    tolerance: 10.5,
+    environment: 'Estratosfera · Corrientes Iónicas (2.4x)',
+    windIntensity: 'moderate',
+    perfectBonus: 75,
+    fitBonus: 35,
+  },
+  {
+    floorNumber: 4,
+    type: 'observatory',
+    name: 'Sky Observatory',
+    widthClass: 'w-32', // 128px
+    speed: 2.95,        // Desafío de coordinación (período 2.1s)
+    tolerance: 9.0,
+    environment: 'Termosfera · Ráfagas Solares (3.0x)',
+    windIntensity: 'moderate',
+    perfectBonus: 90,
+    fitBonus: 45,
+  },
+  {
+    floorNumber: 5,
+    type: 'solarsails',
+    name: 'Plasma Solar Wings',
+    widthClass: 'w-28', // 112px
+    speed: 3.55,        // Rápido y exigente (período 1.8s)
+    tolerance: 8.0,
+    environment: 'Exosfera · Vórtice de Plasma (3.6x)',
+    windIntensity: 'strong',
+    perfectBonus: 110,
+    fitBonus: 55,
+  },
+  {
+    floorNumber: 6,
+    type: 'spire',
+    name: 'Starlight Spire Crown',
+    widthClass: 'w-24', // 96px - Aguja cumbre que corona la torre
+    speed: 4.2,         // Clímax veloz y emocionante (período 1.5s)
+    tolerance: 7.0,     // Precisión máxima
+    environment: 'Corona Estelar · Vórtice Máximo (4.2x)',
+    windIntensity: 'vortex',
+    perfectBonus: 150,
+    fitBonus: 75,
+  },
 ];
 
 export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
@@ -53,6 +133,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
     {
       id: 0,
       type: 'foundation',
+      widthClass: 'w-48',
       x: 50,
       placedBy: 'player',
       offsetFromCenter: 0,
@@ -62,7 +143,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
   const [isVictory, setIsVictory] = useState(false);
 
   // Crane & Physics State
-  const [craneX, setCraneX] = useState(50); // % inside playfield column (25% to 75%)
+  const [craneX, setCraneX] = useState(50); // % inside playfield column (24% to 76%)
   const [isDropping, setIsDropping] = useState(false);
   const [droppedBlockY, setDroppedBlockY] = useState(16); // % from top
   const [droppedBlockX, setDroppedBlockX] = useState(50);
@@ -105,10 +186,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
     stackedBlocksRef.current = stackedBlocks;
   }, [stackedBlocks]);
 
-  // Current block to be placed (Floor 1 to 6)
-  const activeBlockConfig = TOWER_SEQUENCE[Math.min(currentFloorIndex + 1, TOWER_SEQUENCE.length - 1)];
+  // Current floor spec according to progression index (0 to 5)
+  const activeFloorSpec = FLOOR_SPECS[Math.min(currentFloorIndex, FLOOR_SPECS.length - 1)];
 
-  // 1. Crane Oscillation Loop (Smooth sine wave between 24% and 76%)
+  // 1. Crane Oscillation Loop with Progressive Dynamic Speeds
   useEffect(() => {
     if (isVictory) return;
 
@@ -119,17 +200,20 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
       const elapsed = (timestamp - startTime) / 1000;
       
       if (!isDroppingRef.current) {
-        const speed = 1.25 + currentFloorIndexRef.current * 0.1;
-        // Oscillates between 24% and 76% (center is 50%)
+        const spec = FLOOR_SPECS[Math.min(currentFloorIndexRef.current, FLOOR_SPECS.length - 1)];
+        const speed = spec ? spec.speed : 1.35;
+
+        // Smooth sine wave between 24% and 76% (amplitude: 26%, center: 50%)
         const newX = 50 + Math.sin(elapsed * speed) * 26;
         craneXRef.current = newX;
         setCraneX(newX);
 
-        // Check if AstroBot is ready to trigger its drop near center
+        // Check if AstroBot is ready to trigger its drop near target
         if (botReadyToDropRef.current && currentTurnRef.current === 'partner') {
           const lastBlock = stackedBlocksRef.current[stackedBlocksRef.current.length - 1];
           const targetX = lastBlock ? lastBlock.x : 50;
-          if (Math.abs(newX - targetX) <= 5.5) {
+          const snapRange = Math.max(4.0, (spec ? spec.tolerance : 10) * 0.45);
+          if (Math.abs(newX - targetX) <= snapRange) {
             botReadyToDropRef.current = false;
             setBotPhase('dropping');
             handleDropBlock();
@@ -157,13 +241,15 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
     setDroppedBlockX(dropX);
     setDroppedBlockY(16);
 
+    const spec = FLOOR_SPECS[Math.min(currentFloorIndexRef.current, FLOOR_SPECS.length - 1)];
     const lastBlock = stackedBlocksRef.current[stackedBlocksRef.current.length - 1];
     const targetX = lastBlock ? lastBlock.x : 50;
     const offset = dropX - targetX;
     const absOffset = Math.abs(offset);
 
-    // Stacking tolerance threshold: within 11.5% of center is a valid landing
-    const isHit = absOffset <= 11.5;
+    // Stacking tolerance threshold derived directly from floor difficulty spec
+    const tolerance = spec ? spec.tolerance : 12.0;
+    const isHit = absOffset <= tolerance;
     const targetLandingY = 64 - currentFloorIndexRef.current * 7.5;
 
     let currentY = 16;
@@ -175,18 +261,21 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         // === SUCCESSFUL STACK ===
         window.clearInterval(dropTimer);
 
-        const isPerfect = absOffset <= 4;
-        soundEngine.playBlockLand(1 + currentFloorIndexRef.current * 0.08);
+        // Sweet spot: inner 35% of the tolerance counts as perfect
+        const isPerfect = absOffset <= (tolerance * 0.35);
+        soundEngine.playBlockLand(1 + currentFloorIndexRef.current * 0.12);
 
         if (isPerfect) {
-          setScore(s => s + 50);
-          setFeedbackMessage({ text: '¡PERFECTO! ⭐ +50', type: 'perfect' });
+          const points = spec ? spec.perfectBonus : 50;
+          setScore(s => s + points);
+          setFeedbackMessage({ text: `¡PERFECTO! ⭐ +${points}`, type: 'perfect' });
           try {
-            confetti({ particleCount: 35, spread: 60, origin: { y: 0.6 } });
+            confetti({ particleCount: 40, spread: 65, origin: { y: 0.6 } });
           } catch { /* ignore */ }
         } else {
-          setScore(s => s + 25);
-          setFeedbackMessage({ text: '¡BUEN ENCAJE! 👍 +25', type: 'good' });
+          const points = spec ? spec.fitBonus : 25;
+          setScore(s => s + points);
+          setFeedbackMessage({ text: `¡BUEN ENCAJE! 👍 +${points}`, type: 'good' });
           setIsWobbling(true);
           setTimeout(() => setIsWobbling(false), 700);
         }
@@ -194,7 +283,8 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         const finalX = isPerfect ? targetX : dropX;
         const newBlock: StackedBlock = {
           id: Date.now(),
-          type: activeBlockConfig.type,
+          type: spec.type,
+          widthClass: spec.widthClass,
           x: finalX,
           placedBy: currentTurnRef.current,
           offsetFromCenter: finalX - 50,
@@ -218,10 +308,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
           setIsVictory(true);
           soundEngine.playSuccess();
           try {
-            confetti({ particleCount: 100, spread: 100, origin: { y: 0.4 } });
+            confetti({ particleCount: 120, spread: 100, origin: { y: 0.4 } });
           } catch { /* ignore */ }
         } else {
-          // Switch Turn
+          // Switch Turn with next floor number prompt
           const nextTurn = currentTurnRef.current === 'player' ? 'partner' : 'player';
           currentTurnRef.current = nextTurn;
           setCurrentTurn(nextTurn);
@@ -262,9 +352,9 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         }
       }
     }, 28);
-  }, [isVictory, activeBlockConfig, partnerMode]);
+  }, [isVictory, partnerMode]);
 
-  // 3. Bulletproof AstroBot Turn Lifecycle (Immune to 60 FPS RAF cancellations)
+  // 3. Bulletproof AstroBot Turn Lifecycle (Immune to 60 FPS cancellations)
   useEffect(() => {
     if (isVictory || partnerMode !== 'bot' || currentTurn !== 'partner') {
       setBotPhase('idle');
@@ -293,7 +383,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         setBotPhase('dropping');
         const lastBlock = stackedBlocksRef.current[stackedBlocksRef.current.length - 1];
         const targetX = lastBlock ? lastBlock.x : 50;
-        handleDropBlock(targetX + (Math.random() * 4 - 2));
+        handleDropBlock(targetX + (Math.random() * 3 - 1.5));
       }
     }, 3600);
 
@@ -324,6 +414,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
       {
         id: 0,
         type: 'foundation',
+        widthClass: 'w-48',
         x: 50,
         placedBy: 'player',
         offsetFromCenter: 0,
@@ -342,16 +433,16 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
       {/* Dynamic ABCya-style Stardust Background */}
       <CosmicBackground />
 
-      {/* TOP HUD: Missions, Mode, Score & Turn Indicator */}
+      {/* TOP HUD: Missions, Floors, Dynamic Altitude, Mode & Score */}
       <div className="bg-[#003d4c] border-b-2 border-[#00576b] px-3 md:px-6 py-2.5 flex items-center justify-between shrink-0 z-30 shadow-md gap-3">
-        {/* Left: Exit & Tower Info */}
+        {/* Left: Exit & Tower Meter */}
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
             onClick={() => {
               soundEngine.playTap();
               onExit();
             }}
-            className="flex items-center gap-1 px-3 py-1.5 bg-[#002833] hover:bg-[#001f28] active:scale-95 text-[#00f2c9] rounded-full font-black text-xs transition-all border border-[#00c9a7]/30"
+            className="flex items-center gap-1 px-3 py-1.5 bg-[#002833] hover:bg-[#001f28] active:scale-95 text-[#00f2c9] rounded-full font-black text-xs transition-all border border-[#00c9a7]/30 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Missions</span>
@@ -363,6 +454,12 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
             <span className="text-xs font-black text-white">
               Pisos: <strong className="text-yellow-300 font-extrabold">{towerHeightCount} / 7</strong>
             </span>
+          </div>
+
+          {/* Environmental Velocity Indicator */}
+          <div className="hidden lg:flex items-center gap-1.5 bg-[#00242e] px-2.5 py-1 rounded-full border border-cyan-400/20 text-[11px] font-bold text-cyan-200">
+            <Gauge className="w-3 h-3 text-[#00f2c9]" />
+            <span>Vel: <strong className="text-yellow-300">{activeFloorSpec.speed.toFixed(1)}x</strong></span>
           </div>
         </div>
 
@@ -403,7 +500,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 soundEngine.playTap();
                 setPartnerMode('bot');
               }}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer ${
                 partnerMode === 'bot' 
                   ? 'bg-cyan-500 text-slate-950 shadow' 
                   : 'text-[#84cece] hover:text-white'
@@ -418,7 +515,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 soundEngine.playTap();
                 setPartnerMode('pass-and-play');
               }}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer ${
                 partnerMode === 'pass-and-play' 
                   ? 'bg-purple-500 text-white shadow' 
                   : 'text-[#84cece] hover:text-white'
@@ -441,13 +538,32 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
         {/* Playfield Column (Constrained width for identical physics, crane swing and tower base) */}
         <div className="w-full max-w-lg mx-auto relative flex-1 flex flex-col justify-between overflow-hidden">
           
-          {/* Target Hint in Stratosphere */}
-          <div className="absolute top-2 inset-x-0 mx-auto max-w-sm z-15 flex items-center justify-center pointer-events-none px-4">
-            <div className="bg-[#002029]/85 border border-[#00c9a7]/40 rounded-full px-4 py-1 backdrop-blur-md shadow flex items-center gap-2 text-xs font-black text-white">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-              <span>Construyan 7 Pisos para alcanzar la Corona Estelar</span>
+          {/* Target Hint & Dynamic Environmental Conditions */}
+          <div className="absolute top-2 inset-x-0 mx-auto max-w-md z-15 flex items-center justify-center pointer-events-none px-4">
+            <div className="bg-[#002029]/90 border border-[#00c9a7]/40 rounded-full px-4 py-1 backdrop-blur-md shadow-lg flex items-center gap-2 text-xs font-black text-white">
+              <Sparkles className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+              <span className="text-[#00f2c9]">Piso {currentFloorIndex + 1}/7:</span>
+              <span className="text-yellow-200 truncate">{activeFloorSpec.environment}</span>
             </div>
           </div>
+
+          {/* Cosmic Wind Streamers for Upper Atmospheric Floors */}
+          {activeFloorSpec.windIntensity !== 'none' && (
+            <div className="absolute inset-x-0 top-14 h-40 pointer-events-none z-5 overflow-hidden opacity-60">
+              <div 
+                className="w-48 h-0.5 bg-gradient-to-r from-transparent via-cyan-300 to-transparent rounded-full absolute top-6 animate-pulse" 
+                style={{ animationDuration: '1.2s', left: '10%' }}
+              ></div>
+              <div 
+                className="w-56 h-0.5 bg-gradient-to-r from-transparent via-yellow-300/70 to-transparent rounded-full absolute top-16 animate-pulse" 
+                style={{ animationDuration: '0.9s', left: '35%' }}
+              ></div>
+              <div 
+                className="w-44 h-0.5 bg-gradient-to-r from-transparent via-emerald-300/70 to-transparent rounded-full absolute top-26 animate-pulse" 
+                style={{ animationDuration: '1.4s', left: '20%' }}
+              ></div>
+            </div>
+          )}
 
           {/* DYNAMIC FEEDBACK BANNER (+50 / +25 / MISSED) */}
           {feedbackMessage && (
@@ -474,10 +590,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
             </div>
           )}
 
-          {/* OSCILLATING COSMIC CRANE (Hanging Mechanism) */}
+          {/* OSCILLATING COSMIC CRANE (Hanging Mechanism with Variable Floor Width) */}
           {!isVictory && (
             <div 
-              className="absolute top-0 w-36 h-28 pointer-events-none z-20 flex flex-col items-center"
+              className="absolute top-0 w-44 h-28 pointer-events-none z-20 flex flex-col items-center"
               style={{ 
                 left: `${craneX}%`, 
                 transform: 'translateX(-50%)' 
@@ -491,11 +607,11 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></div>
               </div>
 
-              {/* Currently held block (visible while not dropped) */}
+              {/* Currently held block with tapering width */}
               {!isDropping && (
-                <div className="w-36 h-16 mt-0.5 filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] animate-pulse-subtle">
+                <div className={`${activeFloorSpec.widthClass} h-16 mt-0.5 filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] animate-pulse-subtle`}>
                   <TowerBlockIcon 
-                    type={activeBlockConfig.type} 
+                    type={activeFloorSpec.type} 
                     placedBy={currentTurn} 
                   />
                 </div>
@@ -503,10 +619,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
             </div>
           )}
 
-          {/* FALLING BLOCK (In Motion) */}
+          {/* FALLING BLOCK (In Motion with Floor-Specific Width & Miss Rotation) */}
           {isDropping && (
             <div 
-              className={`absolute w-36 h-16 pointer-events-none z-25 filter drop-shadow-[0_12px_20px_rgba(0,0,0,0.8)] transition-transform duration-150`}
+              className={`absolute ${activeFloorSpec.widthClass} h-16 pointer-events-none z-25 filter drop-shadow-[0_12px_20px_rgba(0,0,0,0.8)] transition-transform duration-150`}
               style={{ 
                 left: `${droppedBlockX}%`, 
                 top: `${droppedBlockY}%`,
@@ -514,13 +630,13 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
               }}
             >
               <TowerBlockIcon 
-                type={activeBlockConfig.type} 
+                type={activeFloorSpec.type} 
                 placedBy={currentTurn} 
               />
             </div>
           )}
 
-          {/* THE BUILT STAR TOWER (Anchored at Base) */}
+          {/* THE BUILT STAR TOWER (Tapering Architectural Space Needle) */}
           <div className={`relative flex-1 flex flex-col justify-end items-center pb-8 z-10 transition-transform duration-500 w-full ${
             isWobbling ? 'animate-wiggle' : ''
           }`}>
@@ -530,13 +646,13 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 <div className="w-24 h-1.5 bg-cyan-400/50 rounded-full animate-pulse"></div>
               </div>
 
-              {/* Stacked Floors (Positioned using the exact same coordinate system) */}
+              {/* Stacked Floors with Tapering Widths */}
               {stackedBlocks.map((block, index) => {
                 const bottomPercent = index * 7.5;
                 return (
                   <div 
                     key={block.id}
-                    className="w-36 h-16 absolute flex items-center justify-center transition-all duration-300"
+                    className={`${block.widthClass} h-16 absolute flex items-center justify-center transition-all duration-300`}
                     style={{
                       bottom: `calc(1.75rem + ${bottomPercent}%)`,
                       left: `${block.x}%`,
@@ -573,10 +689,10 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
             </span>
             <span className="text-xs font-black text-white">
               {isPlayerTurn 
-                ? '¡Suelta el bloque cuando esté sobre la torre!' 
+                ? `¡Suelta el Piso ${currentFloorIndex + 1} cuando esté centrado!` 
                 : partnerMode === 'bot' 
                 ? 'Observa a AstroBot colocar el piso...' 
-                : 'Pasa el iPad al compañero para el siguiente piso'}
+                : `Pasa el iPad al compañero para el Piso ${currentFloorIndex + 1}`}
             </span>
           </div>
 
@@ -591,7 +707,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 <div className="w-9 h-9 rounded-xl bg-slate-950 text-[#00f2c9] flex items-center justify-center shadow text-xl">
                   ⬇️
                 </div>
-                <span>SOLTAR PISO DE LA TORRE</span>
+                <span>SOLTAR PISO {currentFloorIndex + 1}</span>
               </button>
             ) : partnerMode === 'pass-and-play' ? (
               <button
@@ -602,7 +718,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
                 <div className="w-9 h-9 rounded-xl bg-slate-950 text-yellow-400 flex items-center justify-center shadow text-xl">
                   👥
                 </div>
-                <span>COMPAÑERO: SOLTAR PISO</span>
+                <span>COMPAÑERO: SOLTAR PISO {currentFloorIndex + 1}</span>
               </button>
             ) : (
               /* ACTIVE WAITING STATE FOR ASTROBOT (CLINICAL SKILL 7 & 8) */
@@ -650,7 +766,7 @@ export const StarTowerGame = ({ onExit }: StarTowerGameProps) => {
               ¡Torre Estelar Completada!
             </h3>
             <p className="text-[#a5d8d8] text-sm font-semibold mb-6">
-              ¡Trabajaron en equipo, tomaron turnos y elevaron los 7 pisos cósmicos hasta las estrellas!
+              ¡Trabajaron en equipo, dominaron las corrientes cósmicas y elevaron los 7 pisos hasta las estrellas!
             </p>
 
             {/* Cooperative Turn-Taking Stats */}
