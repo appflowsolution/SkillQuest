@@ -361,7 +361,7 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
       </div>
 
       {/* UPPER HALF: INTERACTIVE ISLAND DIORAMA */}
-      <div className="h-44 md:h-52 relative overflow-hidden flex flex-col justify-between px-4 py-2 border-b-2 border-[#00576b]/70 bg-gradient-to-b from-[#00171f]/80 to-[#002f3c]/90">
+      <div className="h-48 md:h-56 relative overflow-hidden flex flex-col justify-between px-4 py-2 border-b-2 border-[#00576b]/70 bg-gradient-to-b from-[#00171f]/80 to-[#002f3c]/90">
         {/* Floating Quest Description Card */}
         <div className="z-20 flex items-center justify-between w-full max-w-2xl mx-auto">
           <div className="flex items-center gap-2 bg-[#001f28]/90 border border-amber-400/50 rounded-2xl px-3 py-1.5 shadow-lg backdrop-blur-md">
@@ -484,12 +484,22 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
         </div>
 
         {/* Environmental Target Prompt Ribbon */}
-        <div className="z-20 w-full flex items-center justify-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1 bg-[#00171f]/85 border border-[#00f2c9]/40 rounded-full shadow text-xs font-black text-white">
-            <span className="text-[#00f2c9] uppercase tracking-wider">Goal Phrase:</span>
-            <span className="text-yellow-300 font-extrabold text-sm uppercase tracking-wider">
+        <div className="z-20 w-full flex items-center justify-center pb-1">
+          <div className="inline-flex items-center gap-2.5 md:gap-3.5 px-5 py-2 md:px-7 md:py-2.5 bg-gradient-to-r from-[#00171f]/95 via-[#002833]/95 to-[#00171f]/95 border-2 border-[#00f2c9] rounded-2xl shadow-[0_0_25px_rgba(0,242,201,0.3)] backdrop-blur-md">
+            <div className="flex items-center gap-1.5 text-xs md:text-sm font-black text-[#00f2c9] uppercase tracking-widest shrink-0">
+              <Compass className="w-4 h-4 md:w-5 md:h-5 text-[#00f2c9]" />
+              <span>Goal Phrase:</span>
+            </div>
+            <span className="text-base sm:text-lg md:text-2xl font-black text-yellow-300 uppercase tracking-wider drop-shadow-[0_2px_10px_rgba(250,204,21,0.6)]">
               "{activeQuest.targetSentence}"
             </span>
+            <button
+              onClick={() => soundEngine.speakAac(activeQuest.targetSentence)}
+              className="p-1.5 hover:bg-[#00f2c9]/20 active:scale-95 rounded-xl border border-[#00f2c9]/30 transition-all text-[#00f2c9] hover:text-white cursor-pointer ml-1"
+              title="Listen to goal phrase"
+            >
+              <Volume2 className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
           </div>
         </div>
       </div>
