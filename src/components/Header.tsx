@@ -38,6 +38,11 @@ export const Header = ({
           </button>
         ) : (
           <div className="flex items-center gap-2.5 cursor-pointer">
+            <img
+              src="/apple-touch-icon.png"
+              alt="SkillQuest Icon"
+              className="w-9 h-9 md:w-10 md:h-10 rounded-xl shadow-md border-2 border-white/70 object-cover"
+            />
             <div className="flex items-center">
               <span className="text-2xl md:text-3xl font-black tracking-tight text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] flex items-center gap-1">
                 <span className="bg-[#ff477e] text-white px-2 py-0.5 rounded-xl rotate-[-3deg] shadow-sm">Skill</span>
