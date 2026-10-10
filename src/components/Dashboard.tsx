@@ -72,7 +72,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
                         onSelectGame(game.id);
                       }
                     }}
-                    className={`w-full h-full absolute inset-0 backface-hidden rounded-2xl md:rounded-3xl overflow-hidden border-2 transition-all flex flex-col justify-between ${
+                    className={`w-full h-full absolute inset-0 backface-hidden rounded-2xl md:rounded-3xl overflow-hidden border-2 transition-all flex flex-col justify-between [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] ${
                       isFlipped ? 'opacity-0 pointer-events-none z-0' : 'opacity-100 z-10'
                     } ${
                       isAvailable
@@ -81,7 +81,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
                     }`}
                   >
 
-                    {/* YELLOW CORNER TRIANGLE "SKILL" on Top-Right */}
+                    {/* YELLOW CORNER BADGE "SKILL" on Top-Right */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -89,11 +89,20 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
                         soundEngine.playTap();
                         toggleFlip(game.id);
                       }}
-                      className="absolute top-0 right-0 w-14 h-14 overflow-hidden z-25 cursor-pointer group/skill active:scale-95 transition-transform"
+                      className="absolute top-0 right-0 w-14 h-14 rounded-tr-2xl md:rounded-tr-3xl overflow-hidden z-25 cursor-pointer group/skill active:scale-95 transition-transform"
                       title="Tap to flip card and see skill breakdown"
                     >
-                      <div className="absolute top-0 right-0 w-0 h-0 border-t-[50px] border-t-[#ffb703] border-l-[50px] border-l-transparent drop-shadow-md group-hover/skill:border-t-[#ffd000] transition-colors"></div>
-                      <span className="absolute top-2 right-1 text-[8.5px] md:text-[9.5px] font-black text-slate-950 uppercase rotate-45 tracking-widest select-none drop-shadow-sm">
+                      <svg
+                        viewBox="0 0 56 56"
+                        className="w-full h-full drop-shadow-md"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M 0 0 L 36 0 A 20 20 0 0 1 56 20 L 56 56 Z"
+                          className="fill-[#ffb703] group-hover/skill:fill-[#ffd000] transition-colors"
+                        />
+                      </svg>
+                      <span className="absolute top-2 right-1 text-[8.5px] md:text-[9.5px] font-black text-slate-950 uppercase rotate-45 tracking-widest select-none drop-shadow-sm pointer-events-none">
                         SKILL
                       </span>
                     </button>
@@ -122,7 +131,7 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
 
                   {/* BACK FACE: Clinical Skill Explanation (No Bottom Button, Snug and Clean) */}
                   <div
-                    className={`w-full h-full absolute inset-0 backface-hidden rotate-y-180 rounded-2xl md:rounded-3xl overflow-hidden border-2 border-[#ffb703] bg-[#002530] p-3.5 text-white flex flex-col justify-between shadow-2xl select-text ${
+                    className={`w-full h-full absolute inset-0 backface-hidden rotate-y-180 rounded-2xl md:rounded-3xl overflow-hidden border-2 border-[#ffb703] bg-[#002530] p-3.5 text-white flex flex-col justify-between shadow-2xl select-text [mask-image:radial-gradient(white,black)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] ${
                       isFlipped ? 'opacity-100 z-20 pointer-events-auto' : 'opacity-0 pointer-events-none z-0'
                     }`}
                   >

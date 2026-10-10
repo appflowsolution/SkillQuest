@@ -364,15 +364,6 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
   const [independentTouchesCount, setIndependentTouchesCount] = useState(0);
   const [wordsSpokenCount, setWordsSpokenCount] = useState(0);
 
-  // Visual World Animation State
-  const [islandState, setIslandState] = useState({
-    gateOpen: false,
-    bridgeActive: false,
-    beaconLit: false,
-    creaturesDancing: false,
-    chestOpen: false,
-  });
-
   const activeQuest = questMode === 'story' 
     ? (QUEST_STORY_STAGES[currentQuestIndex] || QUEST_STORY_STAGES[0])
     : (ALL_RANDOM_QUESTS[randomQuestIndex] || ALL_RANDOM_QUESTS[0]);
@@ -460,16 +451,6 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
             soundEngine.speakAac(activeQuest.targetSentence);
           }, 750);
         }
-
-        // Update Island Diorama Animation
-        setIslandState(prev => ({
-          ...prev,
-          gateOpen: prev.gateOpen || activeQuest.phrase.includes('open') || activeQuest.phrase.includes('help') || activeQuest.id === 1,
-          bridgeActive: prev.bridgeActive || activeQuest.phrase.includes('bridge') || activeQuest.phrase.includes('go') || activeQuest.id === 2,
-          beaconLit: prev.beaconLit || activeQuest.phrase.includes('star') || activeQuest.phrase.includes('look') || activeQuest.id === 3,
-          creaturesDancing: prev.creaturesDancing || activeQuest.phrase.includes('play') || activeQuest.phrase.includes('more') || activeQuest.id === 4,
-          chestOpen: prev.chestOpen || activeQuest.phrase.includes('crystal') || activeQuest.phrase.includes('please') || activeQuest.id === 5,
-        }));
 
         setScore(s => s + 100);
         setFeedbackMessage(`QUEST COMPLETE! ⭐ +100`);
@@ -561,13 +542,6 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
     setGuidedTouchesCount(0);
     setIndependentTouchesCount(0);
     setWordsSpokenCount(0);
-    setIslandState({
-      gateOpen: false,
-      bridgeActive: false,
-      beaconLit: false,
-      creaturesDancing: false,
-      chestOpen: false,
-    });
   };
 
   return (
@@ -667,178 +641,77 @@ export const IconQuestGame = ({ onExit }: IconQuestGameProps) => {
         </div>
       </div>
 
-      {/* UPPER HALF: INTERACTIVE ISLAND DIORAMA */}
-      <div className="h-36 md:h-44 relative overflow-hidden flex flex-col justify-start px-4 pt-2 border-b border-[#00576b]/70 bg-gradient-to-b from-[#00171f]/80 to-[#002f3c]/90">
-        {/* Floating Quest Description Card */}
-        <div className="z-20 flex items-center justify-between gap-2 w-full max-w-2xl mx-auto">
-          <div className="flex items-center gap-2 bg-[#001f28]/90 border border-amber-400/50 rounded-2xl px-3 py-1.5 shadow-lg backdrop-blur-md">
-            <div className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-yellow-300 font-black text-xs shrink-0">
-              {questMode === 'story' ? `${currentQuestIndex + 1}/5` : `#${randomRoundCount}`}
-            </div>
-            <div className="flex flex-col text-left">
-              <span className="text-[10px] font-black uppercase text-amber-300">
-                {activeQuest.location} · {activeQuest.title}
-              </span>
-              <span className="text-xs font-bold text-white leading-tight">
-                {isQuestSolved ? activeQuest.actionText : activeQuest.description}
-              </span>
-            </div>
+      {/* STREAMLINED GOAL PHRASE HEADER (COMPACT FOR IPAD FULL-GRID VIEW) */}
+      <div className="w-full bg-[#00171f]/95 border-b-2 border-[#00576b]/70 py-2 px-3 sm:px-6 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20 shadow-lg">
+        {/* Quest Info */}
+        <div className="flex items-center gap-2.5 text-left">
+          <div className="w-7 h-7 rounded-xl bg-amber-500/20 flex items-center justify-center text-yellow-300 font-black text-xs shrink-0 border border-amber-400/40">
+            {questMode === 'story' ? `${currentQuestIndex + 1}/5` : `#${randomRoundCount}`}
           </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Feedback Pop-Up */}
-            {feedbackMessage && (
-              <div className="animate-bounce bg-slate-950/95 border-2 border-yellow-400 text-yellow-300 font-black px-3 py-1 rounded-full text-xs shadow-xl tracking-wide uppercase shrink-0">
-                {feedbackMessage}
-              </div>
-            )}
-
-            {/* Mode Switcher */}
-            <button
-              onClick={toggleQuestMode}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-black border transition-all flex items-center gap-1 shadow-sm cursor-pointer ${
-                questMode === 'random'
-                  ? 'bg-purple-600/90 hover:bg-purple-500 text-white border-purple-400'
-                  : 'bg-[#002833] hover:bg-[#003847] text-[#84cece] border-white/10'
-              }`}
-              title={questMode === 'random' ? 'Random Mode active (infinite)' : 'Switch to Random Mode'}
-            >
-              <Shuffle className="w-3 h-3" />
-              <span>{questMode === 'random' ? 'Random' : 'Story'}</span>
-            </button>
-
-            {questMode === 'random' && (
-              <button
-                onClick={pickNewRandomQuest}
-                className="p-1.5 bg-[#002833] hover:bg-[#003d4c] active:scale-95 text-yellow-300 rounded-xl border border-yellow-400/40 transition-all cursor-pointer"
-                title="Roll a new random quest"
-              >
-                <Dices className="w-3.5 h-3.5" />
-              </button>
-            )}
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider">
+              {activeQuest.location} · {activeQuest.title}
+            </span>
+            <span className="text-xs font-bold text-white/90 leading-tight">
+              {isQuestSolved ? activeQuest.actionText : activeQuest.description}
+            </span>
           </div>
         </div>
 
-        {/* Animated Vector Island Environment Scene */}
-        <div className="absolute inset-0 flex items-end justify-center pointer-events-none z-10 pb-1">
-          <svg viewBox="0 0 800 200" width="100%" height="100%" className="max-w-4xl opacity-95" fill="none">
-            {/* Distant Mystical Mountains */}
-            <polygon points="50,180 180,60 300,180" fill="#002b36" opacity="0.8" />
-            <polygon points="220,180 340,40 480,180" fill="#003d4c" opacity="0.9" />
-            <polygon points="420,180 560,70 700,180" fill="#002b36" opacity="0.8" />
-
-            {/* Glowing Moon / Starlight Sun */}
-            <circle cx="340" cy="40" r="16" fill="#fef08a" opacity="0.9" className="animate-pulse" />
-
-            {/* Ocean Waters Base */}
-            <rect x="0" y="165" width="800" height="35" fill="#001a24" />
-            <line x1="0" y1="165" x2="800" y2="165" stroke="#00f2c9" strokeWidth="2" opacity="0.4" />
-
-            {/* Quest 1 Diorama: Temple Gate */}
-            <g transform="translate(100, 75)">
-              {/* Stone Pillars */}
-              <rect x="0" y="10" width="16" height="80" rx="3" fill="#0f766e" stroke="#2dd4bf" strokeWidth="2" />
-              <rect x="64" y="10" width="16" height="80" rx="3" fill="#0f766e" stroke="#2dd4bf" strokeWidth="2" />
-              <rect x="-8" y="10" width="96" height="14" rx="2" fill="#115e59" stroke="#2dd4bf" strokeWidth="2" />
-              {/* Gate Door (lowers if gateOpen is true) */}
-              <rect 
-                x="16" 
-                y={islandState.gateOpen ? 55 : 24} 
-                width="48" 
-                height="65" 
-                rx="2" 
-                fill="#042f2e" 
-                stroke="#5eead4" 
-                strokeWidth="2" 
-                className="transition-all duration-1000"
-              />
-              {islandState.gateOpen && (
-                <circle cx="40" cy="50" r="12" fill="#facc15" className="animate-ping" opacity="0.75" />
-              )}
-            </g>
-
-            {/* Quest 2 Diorama: Crystal Chasm Bridge */}
-            <g transform="translate(260, 110)">
-              {/* Chasm Ravine */}
-              <polygon points="0,55 30,80 70,80 100,55" fill="#00171f" />
-              {/* Rainbow Bridge (grows if bridgeActive is true) */}
-              <path 
-                d="M5 55 Q 50 25 95 55" 
-                stroke={islandState.bridgeActive ? '#38bdf8' : '#003442'} 
-                strokeWidth={islandState.bridgeActive ? '6' : '2'} 
-                strokeDasharray={islandState.bridgeActive ? 'none' : '4 4'}
-                className="transition-all duration-700"
-              />
-              {islandState.bridgeActive && (
-                <circle cx="50" cy="40" r="8" fill="#a78bfa" className="animate-pulse" />
-              )}
-            </g>
-
-            {/* Quest 3 Diorama: Lighthouse Beacon */}
-            <g transform="translate(430, 60)">
-              {/* Lighthouse Tower */}
-              <polygon points="20,105 10,20 35,20 25,105" fill="#0284c7" stroke="#38bdf8" strokeWidth="2" />
-              <rect x="5" y="15" width="35" height="10" rx="2" fill="#0369a1" />
-              {/* Beacon Light Dome */}
-              <circle cx="22" cy="10" r="8" fill={islandState.beaconLit ? '#fde047' : '#075985'} stroke="#ffffff" strokeWidth="2" />
-              {islandState.beaconLit && (
-                <>
-                  <line x1="22" y1="10" x2="160" y2="-20" stroke="#fef08a" strokeWidth="6" opacity="0.75" className="animate-pulse" />
-                  <circle cx="22" cy="10" r="16" fill="#facc15" opacity="0.4" className="animate-ping" />
-                </>
-              )}
-            </g>
-
-            {/* Quest 4 Diorama: Dancing Crystal Creatures */}
-            <g transform="translate(560, 105)">
-              <circle cx="25" cy="50" r="12" fill={islandState.creaturesDancing ? '#ec4899' : '#831843'} stroke="#f472b6" strokeWidth="2" className={islandState.creaturesDancing ? 'animate-bounce' : ''} />
-              <circle cx="55" cy="45" r="14" fill={islandState.creaturesDancing ? '#a855f7' : '#581c87'} stroke="#c084fc" strokeWidth="2" className={islandState.creaturesDancing ? 'animate-bounce' : ''} style={{ animationDelay: '0.2s' }} />
-              {islandState.creaturesDancing && (
-                <path d="M25 30L27 24L33 28" stroke="#fde047" strokeWidth="2" strokeLinecap="round" />
-              )}
-            </g>
-
-            {/* Quest 5 Diorama: Celestial Starlight Chest */}
-            <g transform="translate(680, 115)">
-              <rect x="0" y="20" width="46" height="30" rx="4" fill="#854d0e" stroke="#facc15" strokeWidth="2.5" />
-              <path 
-                d={islandState.chestOpen ? 'M0 20L23 -5L46 20' : 'M0 20L23 10L46 20'} 
-                stroke="#facc15" 
-                strokeWidth="3" 
-                fill="#a16207" 
-                className="transition-all duration-500" 
-              />
-              <circle cx="23" cy="35" r="4" fill="#ffffff" />
-              {islandState.chestOpen && (
-                <circle cx="23" cy="5" r="12" fill="#fbbf24" className="animate-ping" opacity="0.9" />
-              )}
-            </g>
-          </svg>
-        </div>
-      </div>
-
-      {/* DEDICATED GOAL PHRASE BANNER (NO OVERLAP WITH ISLAND SCENE) */}
-      <div className="w-full bg-[#00171f]/95 border-b-2 border-[#00576b]/70 py-1.5 md:py-2 px-3 flex items-center justify-center shrink-0 z-20 shadow-lg">
-        <div className="inline-flex items-center gap-2.5 md:gap-3.5 px-4 py-1.5 md:px-6 md:py-2 bg-gradient-to-r from-[#001f28] via-[#002833] to-[#001f28] border-2 border-[#00f2c9] rounded-2xl shadow-[0_0_20px_rgba(0,242,201,0.25)]">
-          <div className="flex items-center gap-1.5 text-xs md:text-sm font-black text-[#00f2c9] uppercase tracking-widest shrink-0">
-            <Compass className="w-4 h-4 md:w-5 md:h-5 text-[#00f2c9]" />
-            <span>Goal Phrase:</span>
-          </div>
-          <span className="text-base sm:text-lg md:text-2xl font-black text-yellow-300 uppercase tracking-wider drop-shadow-[0_2px_10px_rgba(250,204,21,0.6)]">
+        {/* Central Goal Phrase Pill */}
+        <div className="inline-flex items-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-1.5 bg-gradient-to-r from-[#001f28] via-[#002833] to-[#001f28] border-2 border-[#00f2c9] rounded-2xl shadow-[0_0_15px_rgba(0,242,201,0.25)] shrink-0">
+          <span className="text-[11px] font-black text-[#00f2c9] uppercase tracking-wider hidden sm:inline">
+            Goal Phrase:
+          </span>
+          <span className="text-base sm:text-lg md:text-xl font-black text-yellow-300 uppercase tracking-wide drop-shadow-[0_2px_8px_rgba(250,204,21,0.5)]">
             "{activeQuest.targetSentence}"
           </span>
           <button
             onClick={() => soundEngine.speakAac(activeQuest.targetSentence)}
-            className="p-1.5 hover:bg-[#00f2c9]/20 active:scale-95 rounded-xl border border-[#00f2c9]/30 transition-all text-[#00f2c9] hover:text-white cursor-pointer ml-1"
+            className="p-1 hover:bg-[#00f2c9]/20 active:scale-95 rounded-lg border border-[#00f2c9]/30 transition-all text-[#00f2c9] hover:text-white cursor-pointer ml-1"
             title="Listen to goal phrase"
           >
             <Volume2 className="w-4 h-4 md:w-5 md:h-5" />
           </button>
         </div>
+
+        {/* Feedback pop-up or Mode Selector */}
+        <div className="flex items-center gap-2 shrink-0">
+          {feedbackMessage ? (
+            <div className="animate-bounce bg-slate-950/95 border-2 border-yellow-400 text-yellow-300 font-black px-3 py-1 rounded-full text-xs shadow-xl tracking-wide uppercase shrink-0">
+              {feedbackMessage}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={toggleQuestMode}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-black border transition-all flex items-center gap-1 shadow-sm cursor-pointer ${
+                  questMode === 'random'
+                    ? 'bg-purple-600/90 hover:bg-purple-500 text-white border-purple-400'
+                    : 'bg-[#002833] hover:bg-[#003847] text-[#84cece] border-white/10'
+                }`}
+                title={questMode === 'random' ? 'Random Mode active (infinite)' : 'Switch to Random Mode'}
+              >
+                <Shuffle className="w-3 h-3" />
+                <span>{questMode === 'random' ? 'Random' : 'Story'}</span>
+              </button>
+
+              {questMode === 'random' && (
+                <button
+                  onClick={pickNewRandomQuest}
+                  className="p-1.5 bg-[#002833] hover:bg-[#003d4c] active:scale-95 text-yellow-300 rounded-xl border border-yellow-400/40 transition-all cursor-pointer"
+                  title="Roll a new random quest"
+                >
+                  <Dices className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* LOWER HALF: THE AAC COMMUNICATOR TABLET (SGD) */}
-      <div className="flex-1 flex flex-col justify-between p-2 md:p-4 max-w-3xl mx-auto w-full z-20 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col justify-between p-2 md:p-3 max-w-4xl mx-auto w-full z-20 overflow-hidden">
         {/* SENTENCE STRIP BAR */}
         <div className="bg-[#001f28] border-2 border-[#00576b] rounded-2xl p-2 md:p-2.5 shadow-xl flex items-center justify-between gap-2 shrink-0 mb-2">
           {/* Sentence Icons Display */}
