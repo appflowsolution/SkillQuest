@@ -259,6 +259,100 @@ class SoundEngine {
       // Silencioso
     }
   }
+
+  // Sonido de soltar bloque desde la grúa cósmica
+  public playBlockDrop() {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(480, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(220, this.ctx.currentTime + 0.12);
+
+      gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.12);
+    } catch {
+      // Silencioso
+    }
+  }
+
+  // Sonido de encaje sólido y satisfactorio de bloque en la torre
+  public playBlockLand(pitchMultiplier = 1) {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      const freq = 260 * pitchMultiplier;
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      osc1.frequency.exponentialRampToValueAtTime(freq * 1.25, this.ctx.currentTime + 0.15);
+
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 2, this.ctx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(freq * 1.5, this.ctx.currentTime + 0.15);
+
+      gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc1.start();
+      osc2.start();
+      osc1.stop(this.ctx.currentTime + 0.18);
+      osc2.stop(this.ctx.currentTime + 0.18);
+    } catch {
+      // Silencioso
+    }
+  }
+
+  // Sonido de cambio de turno («¡Te toca a ti!» / «¡Tu turno!»)
+  public playTurnChime(isPlayerTurn = true) {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const notes = isPlayerTurn ? [587.33, 880] : [783.99, 523.25]; // D5->A5 o G5->C5
+      notes.forEach((freq, idx) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+
+        osc.type = 'sine';
+        const start = this.ctx!.currentTime + idx * 0.1;
+        osc.frequency.setValueAtTime(freq, start);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.2, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
+
+        osc.connect(gain);
+        gain.connect(this.ctx!.destination);
+
+        osc.start(start);
+        osc.stop(start + 0.22);
+      });
+    } catch {
+      // Silencioso
+    }
+  }
 }
 
 export const soundEngine = new SoundEngine();

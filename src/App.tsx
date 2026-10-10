@@ -3,6 +3,8 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { BreakRequestGame } from './components/games/BreakRequestGame';
 import { TimeWarpGame } from './components/games/TimeWarpGame';
+import { ChromaCrittersGame } from './components/games/ChromaCrittersGame';
+import { StarTowerGame } from './components/games/StarTowerGame';
 import { GameId } from './types';
 import { GAMES_CATALOG } from './data/games';
 import { soundEngine } from './utils/audio';
@@ -53,6 +55,10 @@ export function App() {
         <BreakRequestGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : activeGameId === 'more-time' ? (
         <TimeWarpGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
+      ) : activeGameId === 'request-help' ? (
+        <ChromaCrittersGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
+      ) : activeGameId === 'turn-taking' ? (
+        <StarTowerGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-slate-400">Module in development</p>
