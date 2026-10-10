@@ -77,6 +77,21 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
   const [isModeling, setIsModeling] = useState(false);
   const [waitingForChild, setWaitingForChild] = useState(false);
   const [imitationLatencySeconds, setImitationLatencySeconds] = useState(10);
+  // On-demand start state (guarantees direct user gesture for Web Audio unlocking on all browsers)
+  const [isStarted, setIsStarted] = useState(false);
+
+  // Preload and unlock Web Audio API buffers on mount
+  useEffect(() => {
+    soundEngine.initContext();
+    const vowels: VowelType[] = ['a', 'e', 'o'];
+    vowels.forEach(v => {
+      soundEngine.preloadAudioBuffer(`/audio/echo/vowel_${v}.mp3?v=20261010c`);
+      soundEngine.preloadAudioBuffer(`/audio/echo/model_${v}.mp3?v=20261010c`);
+    });
+    soundEngine.preloadAudioBuffer('/audio/echo/heard_you.mp3?v=20261010c');
+    soundEngine.preloadAudioBuffer('/audio/echo/great_job.mp3?v=20261010c');
+    soundEngine.preloadAudioBuffer('/audio/echo/good_try.mp3?v=20261010c');
+  }, []);
 
   // Clinical RBT Metrics Tracker
   const [independentTries, setIndependentTries] = useState(0);
@@ -221,15 +236,15 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
     }
   }, [gameMode, waitingForChild, imitationLatencySeconds, currentTarget.vowel, triggerVowelSound]);
 
-  // Initial Target Modeling when entering Quest or changing target
+  // Target Modeling when entering Quest (after start) or changing target
   useEffect(() => {
-    if (gameMode === 'quest') {
+    if (gameMode === 'quest' && isStarted) {
       const delay = setTimeout(() => {
         modelCurrentVowel();
       }, 700);
       return () => clearTimeout(delay);
     }
-  }, [gameMode, targetIndex, modelCurrentVowel]);
+  }, [gameMode, targetIndex, isStarted, modelCurrentVowel]);
 
   // LIVE MICROPHONE WEB AUDIO API SETUP
   const toggleMicrophone = async () => {
@@ -596,6 +611,44 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
           </div>
         </div>
       </div>
+
+      {/* START QUEST ON-DEMAND OVERLAY (Unlocks Web Audio & guarantees audio playback in all browsers) */}
+      {gameMode === 'quest' && !isStarted && (
+        <div className="absolute inset-0 bg-[#0d001a]/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+          <div className="max-w-md w-full bg-[#1f0038] border-3 border-[#00f2c9] rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col items-center relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-16 -right-16 w-36 h-36 bg-[#00f2c9]/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-purple-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            {/* Critter Avatar Preview */}
+            <div className="w-24 h-24 rounded-full bg-gradient-to-b from-amber-300 via-yellow-400 to-amber-600 p-1.5 shadow-xl mb-4 animate-bounce">
+              <div className="w-full h-full rounded-full overflow-hidden bg-slate-900 flex items-center justify-center">
+                <img src="/characters/echo/critter_a.webp" alt="Bop" className="w-full h-full object-cover" />
+              </div>
+            </div>
+
+            <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight mb-2">
+              Echo Beats Quest
+            </h3>
+            <p className="text-purple-200 text-xs md:text-sm font-semibold mb-6 max-w-xs">
+              Listen to the sound prompt, then echo it to power up the rhythm!
+            </p>
+
+            {/* BIG VIBRANT START BUTTON */}
+            <button
+              onClick={() => {
+                soundEngine.playTap();
+                setIsStarted(true);
+                modelCurrentVowel();
+              }}
+              className="w-full py-4 bg-gradient-to-r from-[#00f2c9] via-[#22c55e] to-[#00f2c9] hover:from-[#48ffdf] hover:to-[#4ade80] active:scale-95 text-slate-950 font-black text-lg md:text-xl rounded-2xl shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-3 transition-all cursor-pointer border-2 border-white/80"
+            >
+              <Volume2 className="w-6 h-6 animate-pulse" />
+              <span>START ECHO QUEST</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

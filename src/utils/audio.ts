@@ -5,18 +5,136 @@ class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private currentAacAudio: HTMLAudioElement | null = null;
+  private audioBufferCache: Map<string, AudioBuffer> = new Map();
+  private activeBufferSource: AudioBufferSourceNode | null = null;
 
-  private initContext() {
-    if (!this.ctx) {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.ctx = new AudioContextClass();
+  constructor() {
+    if (typeof window !== 'undefined') {
+      const unlock = () => {
+        this.initContext();
+        if (this.ctx && this.ctx.state === 'running') {
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('touchstart', unlock);
+          window.removeEventListener('click', unlock);
+          window.removeEventListener('keydown', unlock);
+        }
+      };
+      window.addEventListener('pointerdown', unlock, { passive: true });
+      window.addEventListener('touchstart', unlock, { passive: true });
+      window.addEventListener('click', unlock, { passive: true });
+      window.addEventListener('keydown', unlock, { passive: true });
     }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+  }
+
+  public initContext() {
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass) {
+        this.ctx = new AudioContextClass();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  public isSuspended(): boolean {
+    return !this.ctx || this.ctx.state === 'suspended';
+  }
+
+  public async preloadAudioBuffer(url: string): Promise<AudioBuffer | null> {
+    if (this.audioBufferCache.has(url)) {
+      return this.audioBufferCache.get(url)!;
+    }
+    try {
+      this.initContext();
+      if (!this.ctx) return null;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const arrayBuffer = await res.arrayBuffer();
+      const audioBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+        this.ctx!.decodeAudioData(arrayBuffer, resolve, reject);
+      });
+      this.audioBufferCache.set(url, audioBuffer);
+      return audioBuffer;
+    } catch {
+      return null;
+    }
+  }
+
+  public async playWebAudioClip(url: string, volume = 0.95): Promise<boolean> {
+    if (this.isMuted) return false;
+    this.stopAac();
+
+    try {
+      this.initContext();
+      if (!this.ctx) return false;
+
+      if (this.ctx.state === 'suspended') {
+        await this.ctx.resume().catch(() => {});
+      }
+
+      let buffer: AudioBuffer | null | undefined = this.audioBufferCache.get(url);
+      if (!buffer) {
+        buffer = await this.preloadAudioBuffer(url);
+      }
+
+      if (!buffer || !this.ctx) {
+        // Fallback to HTMLAudioElement if Web Audio decoding fails
+        const fallbackAudio = new Audio(url);
+        fallbackAudio.volume = volume;
+        this.currentAacAudio = fallbackAudio;
+        await fallbackAudio.play().catch(() => {});
+        return true;
+      }
+
+      // Stop previous buffer source if playing
+      if (this.activeBufferSource) {
+        try {
+          this.activeBufferSource.stop();
+          this.activeBufferSource.disconnect();
+        } catch { /* ignore */ }
+        this.activeBufferSource = null;
+      }
+
+      const source = this.ctx.createBufferSource();
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+
+      source.buffer = buffer;
+      source.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      source.onended = () => {
+        if (this.activeBufferSource === source) {
+          this.activeBufferSource = null;
+        }
+      };
+
+      this.activeBufferSource = source;
+      source.start(0);
+      return true;
+    } catch {
+      try {
+        const fallback = new Audio(url);
+        fallback.volume = volume;
+        this.currentAacAudio = fallback;
+        fallback.play().catch(() => {});
+      } catch { /* ignore */ }
+      return false;
     }
   }
 
   public stopAac() {
+    if (this.activeBufferSource) {
+      try {
+        this.activeBufferSource.stop();
+        this.activeBufferSource.disconnect();
+      } catch {
+        // Silent
+      }
+      this.activeBufferSource = null;
+    }
     if (this.currentAacAudio) {
       try {
         this.currentAacAudio.pause();
@@ -545,68 +663,22 @@ class SoundEngine {
     }
   }
 
-  // Pristine AvaNeural speech playback for Echo Beats (A, E, O)
+  // Pristine AvaNeural speech playback for Echo Beats (A, E, O) via Web Audio API
   public playVowelSound(vowel: 'a' | 'e' | 'o') {
     if (this.isMuted) return;
-    this.stopAac();
-
-    try {
-      const audio = new Audio(`/audio/echo/vowel_${vowel}.mp3?v=20261010c`);
-      audio.volume = 0.95;
-      this.currentAacAudio = audio;
-      audio.onended = () => {
-        if (this.currentAacAudio === audio) {
-          this.currentAacAudio = null;
-        }
-      };
-      audio.play().catch(() => {
-        // Paused or interrupted cleanly - no fallback voice
-      });
-    } catch {
-      // Silent
-    }
+    this.playWebAudioClip(`/audio/echo/vowel_${vowel}.mp3?v=20261010c`, 0.95);
   }
 
-  // Model prompt with AvaNeural ("Make the sound: A!")
+  // Model prompt with AvaNeural ("Make the sound: A!") via Web Audio API
   public playEchoModel(vowel: 'a' | 'e' | 'o') {
     if (this.isMuted) return;
-    this.stopAac();
-
-    try {
-      const audio = new Audio(`/audio/echo/model_${vowel}.mp3?v=20261010c`);
-      audio.volume = 0.95;
-      this.currentAacAudio = audio;
-      audio.onended = () => {
-        if (this.currentAacAudio === audio) {
-          this.currentAacAudio = null;
-        }
-      };
-      audio.play().catch(() => {
-        // Paused or interrupted cleanly - no fallback voice
-      });
-    } catch {
-      // Silent
-    }
+    this.playWebAudioClip(`/audio/echo/model_${vowel}.mp3?v=20261010c`, 0.95);
   }
 
-  // Celebratory speech praise with AvaNeural
+  // Celebratory speech praise with AvaNeural via Web Audio API
   public playEchoPraise(type: 'heard_you' | 'great_job' | 'good_try') {
     if (this.isMuted) return;
-    this.stopAac();
-
-    try {
-      const audio = new Audio(`/audio/echo/${type}.mp3`);
-      audio.volume = 0.95;
-      this.currentAacAudio = audio;
-      audio.onended = () => {
-        if (this.currentAacAudio === audio) {
-          this.currentAacAudio = null;
-        }
-      };
-      audio.play().catch(() => {});
-    } catch {
-      // Silent
-    }
+    this.playWebAudioClip(`/audio/echo/${type}.mp3?v=20261010c`, 0.95);
   }
 
   // Celebratory musical fanfare for echoic imitation
