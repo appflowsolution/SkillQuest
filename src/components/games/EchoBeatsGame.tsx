@@ -196,24 +196,22 @@ export const EchoBeatsGame: React.FC<EchoBeatsGameProps> = ({ rbtMode, onExit })
   useEffect(() => {
     if (gameMode !== 'quest' || !waitingForChild) return;
 
+    if (imitationLatencySeconds <= 0) {
+      setWaitingForChild(false);
+      setFeedbackText("Let's try together!");
+      const timeoutId = setTimeout(() => {
+        setFeedbackText(null);
+        modelCurrentVowel();
+      }, 1500);
+      return () => clearTimeout(timeoutId);
+    }
+
     const timer = setInterval(() => {
-      setImitationLatencySeconds(prev => {
-        if (prev <= 1) {
-          // Window expired without pressure: gentle remodel
-          setWaitingForChild(false);
-          setFeedbackText(`Let's try together!`);
-          setTimeout(() => {
-            setFeedbackText(null);
-            modelCurrentVowel();
-          }, 1500);
-          return 6;
-        }
-        return prev - 1;
-      });
+      setImitationLatencySeconds(prev => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameMode, waitingForChild, modelCurrentVowel]);
+  }, [gameMode, waitingForChild, imitationLatencySeconds, modelCurrentVowel]);
 
   // Initial Target Modeling when entering Quest or changing target
   useEffect(() => {

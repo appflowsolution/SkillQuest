@@ -26,6 +26,14 @@ class SoundEngine {
       }
       this.currentAacAudio = null;
     }
+    // Cancel any browser speech synthesis to prevent phantom male system voice
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // Silent
+      }
+    }
   }
 
   public setMuted(muted: boolean) {
@@ -552,10 +560,10 @@ class SoundEngine {
         }
       };
       audio.play().catch(() => {
-        this.fallbackWebSpeech(vowel.toUpperCase());
+        // Paused or interrupted cleanly - no fallback voice
       });
     } catch {
-      this.fallbackWebSpeech(vowel.toUpperCase());
+      // Silent
     }
   }
 
@@ -574,10 +582,10 @@ class SoundEngine {
         }
       };
       audio.play().catch(() => {
-        this.fallbackWebSpeech(`Make the sound ${vowel.toUpperCase()}`);
+        // Paused or interrupted cleanly - no fallback voice
       });
     } catch {
-      this.fallbackWebSpeech(`Make the sound ${vowel.toUpperCase()}`);
+      // Silent
     }
   }
 
