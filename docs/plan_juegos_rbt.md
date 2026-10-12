@@ -1,11 +1,11 @@
 # Plan de Desarrollo: Suite de Juegos Educativos RBT (iPad Web App)
 
 ## 1. Contexto Clínico y Destinatario
-* **Paciente:** Alexander Baez (11 años, 5to grado).
-* **Diagnóstico:** Trastorno del Espectro Autista (TEA - F84.0).
-* **Entorno:** Terapia ABA con RBT (*Registered Behavior Technician*), supervisado por BCBA Islen Ysaac (*Quality Behavior Therapy*).
+* **Población Objetivo:** Aprendices neurodivergentes (6 a 12 años / Terapia Pediátrica y Conductual).
+* **Alcance Clínico:** Trastorno del Espectro Autista (TEA) y desafíos del neurodesarrollo afines (Comunicación funcional, regulación y funciones ejecutivas).
+* **Entorno de Aplicación:** Sesiones de Terapia ABA facilitadas por técnicos de conducta (RBT) bajo supervisión analítico-conductual (BCBA).
 * **Dispositivo de uso prioritario:** iPad (Tablet táctil horizontal / Safari Web App / PWA).
-* **Premisa fundamental:** No utilizar juegos académicos estándar de 5to grado (lectura densa o matemáticas avanzadas) que puedan detonar frustración o escape. Los juegos se centran en **comunicación funcional, funciones ejecutivas, tolerancia y habilidades sociales**.
+* **Premisa fundamental:** No utilizar juegos académicos estándar de aula que puedan detonar frustración o escape. Los juegos se centran en **comunicación funcional, funciones ejecutivas, tolerancia y habilidades sociales**.
 
 ---
 
@@ -54,10 +54,10 @@
 * **Escenario:** "Desafío de las Gemas/Gemas Estelares" — una actividad gratificante pero con dificultad progresiva (clasificar colores o emparejar patrones).
 * **El Elemento Clave:** Un botón flotante permanente en la esquina inferior izquierda: **"NECESITO UN DESCANSO"** (icono de pausa/Break Card grande, color ámbar/azul suave).
 * **Mecánica del Ensayo:**
-  1. *Fase Activa:* Alexander juega emparejando o tocando gemas que suman puntos/estrellas.
+  1. *Fase Activa:* El aprendiz juega emparejando o tocando gemas que suman puntos/estrellas.
   2. *Fase de Reto / Inducción de Demanda:* Tras 3-4 aciertos, aparece un patrón que requiere mayor atención o un reto más largo.
-  3. *Prompt de la RBT o Automático:* Si el niño se demora o la RBT presiona el botón discreto de "Sugerir Break", el botón de descanso emite un pulso luminoso suave.
-  4. *Respuesta Esperada:* Alexander toca el botón "Break".
+  3. *Prompt de la RBT o Automático:* Si el aprendiz se demora o la RBT presiona el botón discreto de "Sugerir Break", el botón de descanso emite un pulso luminoso suave.
+  4. *Respuesta Esperada:* El aprendiz toca el botón "Break".
   5. *Refuerzo Inmediato:* La app celebra la petición (*"¡Muy bien por avisar! Tómate un respiro"*), detiene la música activa y abre la **Pantalla de Calma**.
   6. *Pantalla de Calma:* Animación suave de respiración o partículas flotantes con temporizador opcional de 30 a 60 segundos y botón verde para "Regresar a jugar cuando estés listo".
 * **Métricas RBT registradas en sesión:**

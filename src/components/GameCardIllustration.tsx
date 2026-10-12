@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState } from 'react';
-import { VectorGameIllustration } from './GameCardIllustration.vector-backup';
+import { VectorGameIllustration } from './VectorGameIllustration';
 
 interface GameCardIllustrationProps {
   gameId: string;
