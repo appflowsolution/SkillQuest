@@ -6,6 +6,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com)
 [![Playwright](https://img.shields.io/badge/Playwright-E2E_16%2F16-darkgreen?style=for-the-badge&logo=playwright)](https://playwright.dev)
 [![PWA](https://img.shields.io/badge/PWA-Installable-purple?style=for-the-badge&logo=pwa)](https://web.dev/progressive-web-apps/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](./LICENSE)
 
 > **Gamified Clinical Skill Acquisition Platform for Pediatric Therapy & Behavior Analysis (ABA / RBT).**  
 > SkillQuest bridges clinical behavioral targets with arcade-quality interactive micro-games, transforming repetitive therapy drills into engaging, intrinsically motivating missions.
@@ -103,4 +104,4 @@ Automated one-command production script with environment detection, build valida
 
 ## 📄 License
 
-Proprietary — Developed for specialized clinical behavioral therapy and educational support.
+This project is open-source and available under the terms of the [MIT License](./LICENSE).
