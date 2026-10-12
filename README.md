@@ -90,8 +90,8 @@ Each game directly operationalizes an Applied Behavior Analysis (ABA) or speech 
 ### Local Development
 ```bash
 # 1. Clone repository
-git clone https://github.com/appflowsolution/rbt-games.git
-cd rbt-games
+git clone https://github.com/appflowsolution/SkillQuest.git
+cd SkillQuest
 
 # 2. Install dependencies
 pnpm install
