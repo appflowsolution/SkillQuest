@@ -13,6 +13,45 @@
 
 🔗 **Live Production App:** [https://skill-quest.web.app](https://skill-quest.web.app)
 
+<br />
+
+<div align="center">
+  <img src="./docs/screenshots/dashboard.webp" alt="SkillQuest Mission Hub Dashboard" width="100%" />
+</div>
+
+---
+
+## 📸 Gameplay & Clinical Modules
+
+<div align="center">
+  <table>
+    <tr>
+      <td width="50%" align="center">
+        <strong>Mission 01: Cosmic Break Quest</strong><br />
+        <em>Functional Break Request & Escape Extinction</em><br /><br />
+        <img src="./docs/screenshots/cosmic-break-quest.webp" alt="Cosmic Break Quest" width="100%" />
+      </td>
+      <td width="50%" align="center">
+        <strong>Mission 04: Icon Quest Island</strong><br />
+        <em>AAC Symbol Grid & Guided Prompts</em><br /><br />
+        <img src="./docs/screenshots/icon-quest-island.webp" alt="Icon Quest Island" width="100%" />
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <strong>Mission 06: Echo Beats Jam</strong><br />
+        <em>Vocal Imitation & Echoic Studio</em><br /><br />
+        <img src="./docs/screenshots/echo-beats-jam.webp" alt="Echo Beats Jam" width="100%" />
+      </td>
+      <td width="50%" align="center">
+        <strong>Mission 02: Time Warp Explorer</strong><br />
+        <em>Transition Tolerance & Time Extensions</em><br /><br />
+        <img src="./docs/screenshots/time-warp-explorer.webp" alt="Time Warp Explorer" width="100%" />
+      </td>
+    </tr>
+  </table>
+</div>
+
 ---
 
 ## 🎯 Clinical Missions & Therapeutic Targets
