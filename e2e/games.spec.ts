@@ -130,8 +130,8 @@ test.describe('Game Navigation & Flow Suite', () => {
     await expect(page.getByText('COLS:').first()).toBeVisible();
     await expect(page.getByText(/6 CELLS/i)).toBeVisible();
 
-    // 5. Fire matrix beam
-    const fireBtn = page.getByRole('button', { name: /FIRE MATRIX BEAM/i });
+    // 5. Fire matrix beam with arcade Big Red FIRE button
+    const fireBtn = page.getByRole('button', { name: /^FIRE$/i });
     await expect(fireBtn).toBeVisible();
     await fireBtn.click();
 

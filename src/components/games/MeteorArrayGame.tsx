@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { useState, useId, useRef } from 'react';
 import { 
   ArrowLeft, 
   RotateCcw, 
@@ -28,6 +28,14 @@ interface LevelConfig {
   gridHint: string;
 }
 
+interface LaserBeam {
+  id: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
 const LEVELS: LevelConfig[] = [
   { id: 1, outpost: 'Lunar Outpost Alpha', targetCount: 6, description: 'Calibrate a 6-meteor grid beam', gridHint: '2 rows × 3 cols' },
   { id: 2, outpost: 'Orbital Beacon Delta', targetCount: 8, description: 'Intercept 8 incoming space meteors', gridHint: '2 rows × 4 cols' },
@@ -49,6 +57,7 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
   const [isShattering, setIsShattering] = useState(false);
   const [isVaporized, setIsVaporized] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [laserBeams, setLaserBeams] = useState<LaserBeam[]>([]);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'warn' | 'info' } | null>(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -56,6 +65,9 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
   const [showClinicalInfo, setShowClinicalInfo] = useState(false);
 
   const filterId = useId();
+  const arenaRef = useRef<HTMLDivElement>(null);
+  const leftCannonRef = useRef<HTMLDivElement>(null);
+  const rightCannonRef = useRef<HTMLDivElement>(null);
 
   const currentLevel = LEVELS[levelIndex];
   const target = currentLevel.targetCount;
@@ -81,10 +93,44 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
   const handleFireBeam = () => {
     if (isFiring || isVaporized || isShattering) return;
 
+    // Calculate real dynamic laser paths from bottom cannons to every meteor
+    const arena = arenaRef.current;
+    if (arena) {
+      const arenaRect = arena.getBoundingClientRect();
+      const leftRect = leftCannonRef.current?.getBoundingClientRect();
+      const rightRect = rightCannonRef.current?.getBoundingClientRect();
+
+      const leftX = leftRect ? leftRect.left + leftRect.width / 2 - arenaRect.left : arenaRect.width * 0.25;
+      const leftY = leftRect ? leftRect.top - arenaRect.top : arenaRect.height * 0.92;
+
+      const rightX = rightRect ? rightRect.left + rightRect.width / 2 - arenaRect.left : arenaRect.width * 0.75;
+      const rightY = rightRect ? rightRect.top - arenaRect.top : arenaRect.height * 0.92;
+
+      const meteorEls = arena.querySelectorAll<HTMLElement>('[data-meteor-cell]');
+      const beams: LaserBeam[] = [];
+
+      meteorEls.forEach((el, idx) => {
+        const mRect = el.getBoundingClientRect();
+        const mx = mRect.left + mRect.width / 2 - arenaRect.left;
+        const my = mRect.top + mRect.height / 2 - arenaRect.top;
+
+        const isLeft = mx < arenaRect.width / 2;
+        beams.push({
+          id: idx,
+          x1: isLeft ? leftX : rightX,
+          y1: isLeft ? leftY : rightY,
+          x2: mx,
+          y2: my,
+        });
+      });
+
+      setLaserBeams(beams);
+    }
+
     setIsFiring(true);
     soundEngine.playLaserBeamSweep();
 
-    // Trigger lasers impact after short travel time
+    // Trigger laser impact after beam travel time
     setTimeout(() => {
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 500);
@@ -95,8 +141,8 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
         setIsShattering(true);
 
         confetti({
-          particleCount: 65,
-          spread: 85,
+          particleCount: 70,
+          spread: 90,
           origin: { y: 0.5 },
           colors: ['#00f0ff', '#ffd000', '#f97316', '#a855f7', '#ffffff'],
         });
@@ -106,11 +152,11 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
           type: 'success',
         });
 
-        // After shatter animation, transition to vaporized state then next level
         setTimeout(() => {
           setIsVaporized(true);
           setIsShattering(false);
           setIsFiring(false);
+          setLaserBeams([]);
           setScore(prev => prev + 150 + streak * 25);
           setStreak(prev => prev + 1);
 
@@ -131,6 +177,7 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
       } else {
         setStreak(0);
         setIsFiring(false);
+        setLaserBeams([]);
         if (currentArea < target) {
           setFeedback({
             text: `Matrix beam covers ${currentArea} cells (${selectedRows} × ${selectedCols}). Swarm needs ${target}! Add more rows or columns.`,
@@ -153,6 +200,7 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
     setIsFiring(false);
     setIsShattering(false);
     setIsVaporized(false);
+    setLaserBeams([]);
     setFeedback(null);
   };
 
@@ -166,6 +214,7 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
     setIsVaporized(false);
     setIsShattering(false);
     setIsFiring(false);
+    setLaserBeams([]);
     setShowVictory(false);
     setFeedback(null);
   };
@@ -190,8 +239,8 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
           100% { transform: scale(0.05) rotate(90deg); filter: brightness(0); opacity: 0; }
         }
         @keyframes laserSweepBeam {
-          0% { stroke-dashoffset: 600; opacity: 0; }
-          20% { opacity: 1; }
+          0% { stroke-dashoffset: 1000; opacity: 0; }
+          15% { opacity: 1; }
           100% { stroke-dashoffset: 0; opacity: 1; }
         }
         @keyframes arenaShake {
@@ -203,8 +252,8 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
           75% { transform: translate(-2px, 1px); }
         }
         @keyframes cannonGlow {
-          0%, 100% { opacity: 0.7; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 16px #00f0ff); }
+          0%, 100% { opacity: 0.8; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.2); filter: drop-shadow(0 0 20px #00f0ff); }
         }
       `}</style>
 
@@ -305,8 +354,9 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
       {/* MAIN BATTLE RADAR / SWARM FIELD */}
       <main className="relative flex-1 flex flex-col items-center justify-center p-2 md:p-3 overflow-hidden">
         
-        {/* Holographic Arena Container with Optional Screenshake */}
+        {/* Holographic Arena Container with ArenaRef for Real Lasers */}
         <div 
+          ref={arenaRef}
           className={`relative w-full max-w-4xl flex-1 flex flex-col items-center justify-between rounded-3xl bg-slate-900/50 border border-[#0284c7]/30 shadow-2xl p-2 md:p-4 backdrop-blur-sm overflow-hidden ${
             isShaking ? 'animate-[arenaShake_0.5s_ease-in-out]' : ''
           }`}
@@ -345,6 +395,73 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
             </div>
           </div>
 
+          {/* SVG FULL-ARENA LASER BEAMS (Originating exactly at the bottom cannons and terminating at meteor centers) */}
+          {isFiring && laserBeams.length > 0 && (
+            <svg 
+              className="absolute inset-0 w-full h-full pointer-events-none z-30 overflow-visible"
+            >
+              <defs>
+                <linearGradient id={`laser-ray-grad-${filterId}`} x1="0%" y1="100%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#00f0ff" stopOpacity="1" />
+                  <stop offset="60%" stopColor="#ffffff" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#ffd000" stopOpacity="1" />
+                </linearGradient>
+                <filter id={`laser-ray-glow-${filterId}`}>
+                  <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
+
+              {laserBeams.map((beam) => (
+                <g key={`beam-${beam.id}`}>
+                  {/* Wide Outer Plasma Beam */}
+                  <line
+                    x1={beam.x1}
+                    y1={beam.y1}
+                    x2={beam.x2}
+                    y2={beam.y2}
+                    stroke="rgba(0, 240, 255, 0.4)"
+                    strokeWidth="10"
+                    strokeLinecap="round"
+                    filter={`url(#laser-ray-glow-${filterId})`}
+                  />
+                  {/* High Intensity Laser Core with Rapid Travel Animation */}
+                  <line
+                    x1={beam.x1}
+                    y1={beam.y1}
+                    x2={beam.x2}
+                    y2={beam.y2}
+                    stroke={`url(#laser-ray-grad-${filterId})`}
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    style={{
+                      strokeDasharray: '1000',
+                      animation: 'laserSweepBeam 0.22s ease-out forwards',
+                    }}
+                  />
+                  {/* Energetic Impact Rings at Target Meteor */}
+                  <circle
+                    cx={beam.x2}
+                    cy={beam.y2}
+                    r="16"
+                    fill="#00f0ff"
+                    opacity="0.8"
+                    className="animate-ping"
+                  />
+                  <circle
+                    cx={beam.x2}
+                    cy={beam.y2}
+                    r="6"
+                    fill="#ffffff"
+                  />
+                </g>
+              ))}
+            </svg>
+          )}
+
           {/* SWARM GRID VISUALIZATION CONTAINER */}
           <div className="relative z-10 flex-1 w-full flex items-center justify-center p-1 md:p-2 min-h-[220px]">
             {!isVaporized ? (
@@ -365,86 +482,6 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
                   aspectRatio: `${maxDisplayCols} / ${maxDisplayRows}`,
                 }}
               >
-                {/* SVG DYNAMIC LASER BEAMS OVERLAY (Shooting upward from bottom cannon battery) */}
-                {isFiring && (
-                  <svg 
-                    className="absolute inset-0 w-full h-full pointer-events-none z-30 overflow-visible"
-                  >
-                    <defs>
-                      <linearGradient id={`laser-beam-grad-${filterId}`} x1="0%" y1="100%" x2="0%" y2="0%">
-                        <stop offset="0%" stopColor="#00f0ff" stopOpacity="1" />
-                        <stop offset="70%" stopColor="#ffffff" stopOpacity="1" />
-                        <stop offset="100%" stopColor="#ffd000" stopOpacity="1" />
-                      </linearGradient>
-                      <filter id={`laser-glow-${filterId}`}>
-                        <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
-                        <feMerge>
-                          <feMergeNode in="coloredBlur"/>
-                          <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                      </filter>
-                    </defs>
-
-                    {Array.from({ length: selectedRows * selectedCols }).map((_, idx) => {
-                      const rowIndex = Math.floor(idx / selectedCols);
-                      const colIndex = idx % selectedCols;
-                      
-                      // Target coordinates in percentage
-                      const targetX = ((colIndex + 0.5) / selectedCols) * 100;
-                      const targetY = ((rowIndex + 0.5) / selectedRows) * 100;
-
-                      // Source from dual cannon battery positions at bottom
-                      const sourceX = colIndex < selectedCols / 2 ? 30 : 70;
-                      const sourceY = 115; // Bottom emitter position
-
-                      return (
-                        <g key={`laser-ray-${idx}`}>
-                          {/* Wide Plasma Aura */}
-                          <line
-                            x1={`${sourceX}%`}
-                            y1={`${sourceY}%`}
-                            x2={`${targetX}%`}
-                            y2={`${targetY}%`}
-                            stroke="rgba(0, 240, 255, 0.45)"
-                            strokeWidth="8"
-                            strokeLinecap="round"
-                            filter={`url(#laser-glow-${filterId})`}
-                          />
-                          {/* High Intensity Hot Core */}
-                          <line
-                            x1={`${sourceX}%`}
-                            y1={`${sourceY}%`}
-                            x2={`${targetX}%`}
-                            y2={`${targetY}%`}
-                            stroke={`url(#laser-beam-grad-${filterId})`}
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            style={{
-                              strokeDasharray: '600',
-                              animation: 'laserSweepBeam 0.25s ease-out forwards',
-                            }}
-                          />
-                          {/* Impact Flash Ring at Meteor Center */}
-                          <circle
-                            cx={`${targetX}%`}
-                            cy={`${targetY}%`}
-                            r="14"
-                            fill="#00f0ff"
-                            opacity="0.75"
-                            className="animate-ping"
-                          />
-                          <circle
-                            cx={`${targetX}%`}
-                            cy={`${targetY}%`}
-                            r="6"
-                            fill="#ffffff"
-                          />
-                        </g>
-                      );
-                    })}
-                  </svg>
-                )}
-
                 {/* Render Grid Cells & Floating Volumetric Asteroids */}
                 {Array.from({ length: selectedRows * selectedCols }).map((_, idx) => {
                   const rowIndex = Math.floor(idx / selectedCols);
@@ -458,6 +495,7 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
                   return (
                     <div
                       key={`cell-${rowIndex}-${colIndex}`}
+                      data-meteor-cell="true"
                       className={`relative flex items-center justify-center rounded-2xl p-1 transition-all duration-300 ${
                         isShattering
                           ? 'bg-transparent'
@@ -569,28 +607,34 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
           <div className="relative z-10 w-full flex items-center justify-around px-8 pt-1">
             {/* Left Cannon Battery */}
             <div className="flex flex-col items-center">
-              <div className={`w-8 h-4 rounded-t-lg bg-gradient-to-t from-slate-800 to-cyan-500 border-x border-t border-cyan-400 flex items-center justify-center transition-all ${
-                isFiring ? 'scale-125 shadow-[0_0_20px_#00f0ff] animate-[cannonGlow_0.3s_ease-in-out_infinite]' : 'opacity-80'
-              }`}>
-                <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#ffffff]" />
+              <div 
+                ref={leftCannonRef}
+                className={`w-9 h-5 rounded-t-xl bg-gradient-to-t from-slate-800 via-cyan-900 to-cyan-400 border-x-2 border-t-2 border-cyan-300 flex items-center justify-center transition-all ${
+                  isFiring ? 'scale-125 shadow-[0_0_25px_#00f0ff] animate-[cannonGlow_0.3s_ease-in-out_infinite]' : 'opacity-90 shadow-[0_0_10px_rgba(6,182,212,0.5)]'
+                }`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_#ffffff]" />
               </div>
-              <div className="w-14 h-2 bg-slate-900 border-b border-x border-slate-700 rounded-b" />
+              <div className="w-16 h-2.5 bg-slate-900 border-b border-x border-slate-700 rounded-b-lg shadow-inner" />
             </div>
 
             {/* Central Targeting Radar Indicator */}
-            <div className="text-[10px] uppercase font-black tracking-widest text-[#38bdf8] flex items-center gap-1.5 opacity-70">
-              <Crosshair className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '8s' }} />
+            <div className="text-[10px] md:text-xs uppercase font-black tracking-widest text-[#38bdf8] flex items-center gap-1.5 opacity-80">
+              <Crosshair className="w-4 h-4 text-cyan-400 animate-spin" style={{ animationDuration: '8s' }} />
               <span>ORBITAL LASER EMITTER ARRAY</span>
             </div>
 
             {/* Right Cannon Battery */}
             <div className="flex flex-col items-center">
-              <div className={`w-8 h-4 rounded-t-lg bg-gradient-to-t from-slate-800 to-cyan-500 border-x border-t border-cyan-400 flex items-center justify-center transition-all ${
-                isFiring ? 'scale-125 shadow-[0_0_20px_#00f0ff] animate-[cannonGlow_0.3s_ease-in-out_infinite]' : 'opacity-80'
-              }`}>
-                <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#ffffff]" />
+              <div 
+                ref={rightCannonRef}
+                className={`w-9 h-5 rounded-t-xl bg-gradient-to-t from-slate-800 via-cyan-900 to-cyan-400 border-x-2 border-t-2 border-cyan-300 flex items-center justify-center transition-all ${
+                  isFiring ? 'scale-125 shadow-[0_0_25px_#00f0ff] animate-[cannonGlow_0.3s_ease-in-out_infinite]' : 'opacity-90 shadow-[0_0_10px_rgba(6,182,212,0.5)]'
+                }`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_#ffffff]" />
               </div>
-              <div className="w-14 h-2 bg-slate-900 border-b border-x border-slate-700 rounded-b" />
+              <div className="w-16 h-2.5 bg-slate-900 border-b border-x border-slate-700 rounded-b-lg shadow-inner" />
             </div>
           </div>
 
@@ -669,22 +713,31 @@ export const MeteorArrayGame = ({ onExit }: MeteorArrayGameProps) => {
             </div>
           </div>
 
-          {/* FIRE MATRIX BEAM BUTTON */}
-          <div className="w-full md:w-auto flex-1 max-w-xs">
-            <button
-              onClick={handleFireBeam}
-              disabled={isFiring || isVaporized || isShattering}
-              className={`w-full py-3.5 px-6 rounded-2xl font-black text-base md:text-lg uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all duration-300 active:scale-95 ${
-                isFiring || isShattering
-                  ? 'bg-cyan-500 text-white shadow-[0_0_35px_#06b6d4] animate-pulse cursor-wait'
-                  : isCorrect
-                    ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-[0_0_25px_rgba(52,211,153,0.6)] cursor-pointer'
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border border-blue-400/40 shadow-[0_0_15px_rgba(37,99,235,0.4)] cursor-pointer'
-              }`}
-            >
-              <Zap className={`w-5 h-5 ${isFiring || isShattering ? 'animate-bounce' : ''}`} />
-              <span>{isFiring || isShattering ? 'FIRING LASERS...' : 'FIRE MATRIX BEAM'}</span>
-            </button>
+          {/* ARCADE BIG RED FIRE BUTTON (Classic tactile arcade plunger) */}
+          <div className="w-full md:w-auto flex-1 max-w-[240px] flex justify-center">
+            <div className="relative p-1.5 rounded-full bg-gradient-to-b from-slate-700 via-slate-800 to-slate-950 border-2 border-slate-600 shadow-[0_6px_14px_rgba(0,0,0,0.8)]">
+              <button
+                onClick={handleFireBeam}
+                disabled={isFiring || isVaporized || isShattering}
+                aria-label="FIRE"
+                className={`relative w-44 md:w-48 h-14 md:h-16 rounded-full font-black text-xl md:text-2xl uppercase tracking-widest flex items-center justify-center gap-2.5 transition-all duration-150 select-none overflow-hidden ${
+                  isFiring || isShattering
+                    ? 'bg-red-700 text-white/80 translate-y-2 shadow-[0_2px_0_#450a0a] cursor-wait'
+                    : 'bg-gradient-to-b from-red-500 via-red-600 to-red-700 hover:from-red-400 hover:to-red-600 active:translate-y-2 active:shadow-[0_2px_0_#450a0a] text-white shadow-[0_8px_0_#7f1d1d,0_12px_24px_rgba(239,68,68,0.55)] cursor-pointer'
+                }`}
+              >
+                {/* Gloss Curved Highlight at Top */}
+                <span className="absolute inset-x-4 top-1 h-3.5 rounded-full bg-gradient-to-b from-white/50 to-transparent pointer-events-none" />
+                
+                {/* Yellow Lightning Blast Icon */}
+                <Zap className={`w-6 h-6 text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${isFiring || isShattering ? 'animate-bounce' : ''}`} />
+                
+                {/* Massive Arcade FIRE Label */}
+                <span className="font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] tracking-widest text-white">
+                  {isFiring || isShattering ? 'FIRING...' : 'FIRE'}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </footer>
