@@ -107,6 +107,8 @@ test.describe('Game Navigation & Flow Suite', () => {
     // 9. Return to Mission Hub
     const returnBtn = page.getByRole('button', { name: /Mission Hub/i }).last();
     await returnBtn.click();
-    await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS|CHOOSE YOUR QUEST/i })).toBeVisible();
+    // Must return to Sector 2: Math Academy directly, not the default Sector 1
+    await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
+    await expect(page.getByText(/Meteor Array Blaster/i)).toBeVisible();
   });
 });

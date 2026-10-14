@@ -216,14 +216,14 @@ export const CosmicFuelGame = ({ onExit }: CosmicFuelGameProps) => {
           </div>
         </div>
 
-        {/* Center Outpost Badge */}
-        <div className="text-center">
-          <div className="text-[10px] uppercase tracking-widest text-[#7dd3fc] font-black">
+        {/* Center Outpost Badge with Hero Target Display */}
+        <div className="text-center px-4 py-1 rounded-2xl bg-black/50 border border-[#0284c7]/50 shadow-lg">
+          <div className="text-[10px] md:text-[11px] uppercase tracking-widest text-[#7dd3fc] font-black">
             MISSION {levelIndex + 1} • {currentLevel.outpost}
           </div>
-          <div className="flex items-center justify-center gap-1.5">
-            <span className="text-xs text-slate-300 font-bold">TARGET:</span>
-            <span className="text-sm md:text-base font-black text-[#ffd000] drop-shadow-[0_0_8px_rgba(255,208,0,0.5)]">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xs md:text-sm text-slate-300 font-extrabold tracking-wider">TARGET:</span>
+            <span className="text-xl md:text-3xl font-black text-[#ffd000] drop-shadow-[0_0_14px_rgba(255,208,0,0.8)] tracking-tight">
               {target} MW
             </span>
           </div>
@@ -579,9 +579,10 @@ export const CosmicFuelGame = ({ onExit }: CosmicFuelGameProps) => {
                 className="absolute w-full z-30 pointer-events-none flex items-center transition-all duration-500"
                 style={{ bottom: `${targetPercentage}%` }}
               >
-                <div className="w-full h-[2.5px] bg-[#ffd000] shadow-[0_0_8px_#ffd000]"></div>
-                <div className="absolute right-1 -translate-y-1/2 px-1.5 py-0.5 rounded bg-[#ffd000] text-slate-950 text-[9px] font-black shadow tracking-tighter">
-                  GOAL {target}
+                <div className="w-full h-[3px] bg-[#ffd000] shadow-[0_0_12px_#ffd000]"></div>
+                <div className="absolute right-0 -translate-y-1/2 px-2 py-1 rounded-l-lg bg-[#ffd000] text-slate-950 text-xs md:text-sm font-black shadow-xl tracking-tight flex items-center gap-1 border-y border-l border-amber-200">
+                  <span className="text-[10px] md:text-xs text-slate-800">TARGET</span>
+                  <span className="text-sm md:text-base font-black underline decoration-2">{target}</span>
                 </div>
               </div>
 
@@ -605,17 +606,26 @@ export const CosmicFuelGame = ({ onExit }: CosmicFuelGameProps) => {
             </div>
           </div>
 
-          {/* Current Reading HUD */}
-          <div className="w-full p-2.5 rounded-xl bg-slate-950/70 border border-[#0284c7]/30 text-center">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Current Output</div>
-            <div className={`text-2xl font-black transition-colors ${
-              isCalibrated 
-                ? 'text-emerald-400' 
-                : isOvercharged 
-                  ? 'text-rose-400' 
-                  : 'text-[#38bdf8]'
-            }`}>
-              {currentFuel} <span className="text-xs font-bold text-slate-400">MW</span>
+          {/* Prominent Comparative Target Goal vs Current Output HUD */}
+          <div className="w-full grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-950/80 border border-[#0284c7]/40 text-center shadow-lg">
+            <div className="bg-[#ffd000]/10 border border-[#ffd000]/30 rounded-lg py-1 px-1.5 flex flex-col justify-center">
+              <div className="text-[10px] md:text-[11px] uppercase font-black text-amber-300">TARGET GOAL</div>
+              <div className="text-2xl md:text-3xl font-black text-[#ffd000] drop-shadow-[0_0_10px_rgba(255,208,0,0.6)]">
+                {target} <span className="text-xs font-bold text-amber-200">MW</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/80 border border-slate-700/60 rounded-lg py-1 px-1.5 flex flex-col justify-center">
+              <div className="text-[10px] md:text-[11px] uppercase font-black text-slate-300">CURRENT OUTPUT</div>
+              <div className={`text-2xl md:text-3xl font-black transition-colors ${
+                isCalibrated 
+                  ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.6)]' 
+                  : isOvercharged 
+                    ? 'text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.6)]' 
+                    : 'text-[#38bdf8] drop-shadow-[0_0_10px_rgba(56,189,248,0.6)]'
+              }`}>
+                {currentFuel} <span className="text-xs font-bold text-slate-400">MW</span>
+              </div>
             </div>
           </div>
         </div>

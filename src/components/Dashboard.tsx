@@ -20,12 +20,27 @@ import {
 interface DashboardProps {
   onSelectGame: (gameId: GameId) => void;
   rbtMode: boolean;
+  activeSector?: WorldSector;
+  onSectorChange?: (sector: WorldSector) => void;
 }
 
-export const Dashboard = ({ onSelectGame }: DashboardProps) => {
-  const [activeSector, setActiveSector] = useState<WorldSector>('behavior');
+export const Dashboard = ({ 
+  onSelectGame, 
+  activeSector: controlledSector,
+  onSectorChange 
+}: DashboardProps) => {
+  const [internalSector, setInternalSector] = useState<WorldSector>(controlledSector ?? 'behavior');
   // Track which cards are flipped (to show the skill explanation)
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
+
+  // Sync internal sector if controlledSector prop changes
+  useEffect(() => {
+    if (controlledSector && controlledSector !== internalSector) {
+      setInternalSector(controlledSector);
+    }
+  }, [controlledSector]);
+
+  const activeSector = controlledSector ?? internalSector;
 
   // Swipe gesture tracking
   const touchStartX = useRef<number | null>(null);
@@ -41,7 +56,8 @@ export const Dashboard = ({ onSelectGame }: DashboardProps) => {
   const switchSector = (sector: WorldSector) => {
     if (sector !== activeSector) {
       soundEngine.playTap();
-      setActiveSector(sector);
+      setInternalSector(sector);
+      onSectorChange?.(sector);
     }
   };
 
