@@ -1,7 +1,9 @@
 import type { FC } from 'react';
+import type { WorldSector } from '../types';
 
 interface CosmicBackgroundProps {
   className?: string;
+  sector?: WorldSector;
 }
 
 interface StarDot {
@@ -65,56 +67,73 @@ const STAR_DOTS: StarDot[] = [
   { x: 94, y: 91, size: 2.5, color: '#a7f3d0', duration: 3.8, delay: 1.5 },
 ];
 
-export const CosmicBackground: FC<CosmicBackgroundProps> = ({ className = '' }) => {
+const MATH_COLOR_MAP: Record<string, string> = {
+  '#5eead4': '#38bdf8', // sky-400
+  '#48ffdf': '#00f2fe', // electric cyan
+  '#99f6e4': '#93c5fd', // blue-300
+  '#a7f3d0': '#818cf8', // indigo-400
+};
+
+export const CosmicBackground: FC<CosmicBackgroundProps> = ({ 
+  className = '',
+  sector = 'behavior'
+}) => {
+  const isMath = sector === 'math';
+  const cloud1 = isMath ? 'bg-[#0c4a6e]' : 'bg-[#004e63]';
+  const cloud2 = isMath ? 'bg-[#1e3a8a]' : 'bg-[#00475a]';
+
   return (
     <div className={`absolute inset-0 pointer-events-none overflow-hidden z-0 select-none ${className}`}>
       {/* Subtle Horizontal ABCya Pill Clouds */}
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-[8%] -left-[5%] w-[38%] h-6 bg-[#004e63] rounded-full blur-[1px]"></div>
-        <div className="absolute top-[22%] left-[30%] w-[45%] h-8 bg-[#004e63] rounded-full blur-[1px]"></div>
-        <div className="absolute top-[38%] right-[-8%] w-[42%] h-7 bg-[#00475a] rounded-full blur-[1px]"></div>
-        <div className="absolute top-[54%] left-[10%] w-[50%] h-9 bg-[#004e63] rounded-full blur-[1px]"></div>
-        <div className="absolute top-[70%] -left-[10%] w-[48%] h-8 bg-[#00475a] rounded-full blur-[1px]"></div>
-        <div className="absolute top-[85%] right-[15%] w-[40%] h-7 bg-[#004e63] rounded-full blur-[1px]"></div>
+        <div className={`absolute top-[8%] -left-[5%] w-[38%] h-6 ${cloud1} rounded-full blur-[1px] transition-colors duration-700`}></div>
+        <div className={`absolute top-[22%] left-[30%] w-[45%] h-8 ${cloud1} rounded-full blur-[1px] transition-colors duration-700`}></div>
+        <div className={`absolute top-[38%] right-[-8%] w-[42%] h-7 ${cloud2} rounded-full blur-[1px] transition-colors duration-700`}></div>
+        <div className={`absolute top-[54%] left-[10%] w-[50%] h-9 ${cloud1} rounded-full blur-[1px] transition-colors duration-700`}></div>
+        <div className={`absolute top-[70%] -left-[10%] w-[48%] h-8 ${cloud2} rounded-full blur-[1px] transition-colors duration-700`}></div>
+        <div className={`absolute top-[85%] right-[15%] w-[40%] h-7 ${cloud1} rounded-full blur-[1px] transition-colors duration-700`}></div>
       </div>
 
-      {/* Gentle Twinkling Light-Green & Mint Stardust Dots */}
+      {/* Gentle Twinkling Stardust Dots with sector tint */}
       <div className="absolute inset-0">
-        {STAR_DOTS.map((star, idx) => (
-          <div
-            key={idx}
-            className="absolute rounded-full"
-            style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: `${star.size}px`,
-              height: `${star.size}px`,
-              backgroundColor: star.color,
-              boxShadow: `0 0 ${star.size * 2}px ${star.color}`,
-              animation: `twinkle-gentle ${star.duration}s infinite ease-in-out ${star.delay}s`,
-            }}
-          >
-            {/* Subtle 4-pointed glint for larger stars */}
-            {star.hasGlint && (
-              <div 
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                style={{
-                  width: `${star.size * 2.8}px`,
-                  height: `${star.size * 2.8}px`,
-                }}
-              >
+        {STAR_DOTS.map((star, idx) => {
+          const color = isMath ? (MATH_COLOR_MAP[star.color] || star.color) : star.color;
+          return (
+            <div
+              key={idx}
+              className="absolute rounded-full transition-colors duration-700"
+              style={{
+                left: `${star.x}%`,
+                top: `${star.y}%`,
+                width: `${star.size}px`,
+                height: `${star.size}px`,
+                backgroundColor: color,
+                boxShadow: `0 0 ${star.size * 2}px ${color}`,
+                animation: `twinkle-gentle ${star.duration}s infinite ease-in-out ${star.delay}s`,
+              }}
+            >
+              {/* Subtle 4-pointed glint for larger stars */}
+              {star.hasGlint && (
                 <div 
-                  className="w-full h-[1px] absolute top-1/2 -translate-y-1/2" 
-                  style={{ backgroundColor: star.color, opacity: 0.7 }}
-                />
-                <div 
-                  className="h-full w-[1px] absolute left-1/2 -translate-x-1/2" 
-                  style={{ backgroundColor: star.color, opacity: 0.7 }}
-                />
-              </div>
-            )}
-          </div>
-        ))}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{
+                    width: `${star.size * 2.8}px`,
+                    height: `${star.size * 2.8}px`,
+                  }}
+                >
+                  <div 
+                    className="w-full h-[1px] absolute top-1/2 -translate-y-1/2 transition-colors duration-700" 
+                    style={{ backgroundColor: color, opacity: 0.7 }}
+                  />
+                  <div 
+                    className="h-full w-[1px] absolute left-1/2 -translate-x-1/2 transition-colors duration-700" 
+                    style={{ backgroundColor: color, opacity: 0.7 }}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

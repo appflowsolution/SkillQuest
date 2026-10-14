@@ -188,6 +188,82 @@ export const GameCardIllustration: FC<GameCardIllustrationProps> = ({ gameId }) 
         </div>
       );
 
+    case 'cosmic-fuel':
+      // Cosmic Fuel Lab: Rocket engine, reactor fuel tanks, +/- pressure gauges
+      return (
+        <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-[#0b2545] via-[#13315c] to-[#134074] flex items-center justify-center">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/25 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-blue-500/25 rounded-full blur-2xl"></div>
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-400 to-blue-600 border-2 border-white/80 shadow-lg shadow-sky-500/50 flex items-center justify-center relative">
+              <span className="text-2xl drop-shadow">🚀</span>
+              <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[9px] font-black border border-white">
+                +10
+              </span>
+              <span className="absolute -bottom-2 -left-2 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black border border-white">
+                -5
+              </span>
+            </div>
+            <div className="mt-2 flex gap-1.5 items-center bg-black/40 px-2 py-0.5 rounded-full border border-sky-400/40">
+              <span className="text-sky-300 font-mono text-[10px] font-black">FUEL: 45 / 45</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'meteor-array':
+      // Meteor Array Blaster: Grid of asteroids with geometric target box
+      return (
+        <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-[#1e1b4b] via-[#2e1065] to-[#3b0764] flex items-center justify-center">
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-indigo-500/25 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-fuchsia-500/25 rounded-full blur-2xl"></div>
+          <div className="relative z-10 flex flex-col items-center">
+            {/* 3x4 Asteroid Grid */}
+            <div className="p-2 rounded-xl bg-black/50 border-2 border-cyan-400/80 shadow-lg shadow-cyan-500/30 flex flex-col gap-1">
+              <div className="flex gap-1.5 text-xs">
+                <span>☄️</span><span>☄️</span><span>☄️</span><span>☄️</span>
+              </div>
+              <div className="flex gap-1.5 text-xs">
+                <span>☄️</span><span>☄️</span><span>☄️</span><span>☄️</span>
+              </div>
+              <div className="flex gap-1.5 text-xs">
+                <span>☄️</span><span>☄️</span><span>☄️</span><span>☄️</span>
+              </div>
+            </div>
+            <div className="mt-1.5 flex gap-1 items-center bg-indigo-900/80 px-2 py-0.5 rounded-md border border-cyan-300/40">
+              <span className="text-cyan-200 font-mono text-[10.5px] font-black">3 × 4 = 12</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'number-forge':
+      // Number Forge Alchemist: Cauldron with floating operation runes
+      return (
+        <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-[#18002e] via-[#31005c] to-[#120024] flex items-center justify-center">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/25 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-amber-500/25 rounded-full blur-2xl"></div>
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-500 via-fuchsia-500 to-amber-400 border-2 border-white/80 shadow-lg shadow-purple-500/50 flex items-center justify-center relative animate-pulse">
+              <span className="text-2xl drop-shadow">🔮</span>
+            </div>
+            <div className="mt-2 flex gap-1 items-center">
+              <span className="w-5 h-5 rounded-md bg-violet-700/90 text-white font-mono text-[10px] font-black flex items-center justify-center border border-violet-400/50">
+                4
+              </span>
+              <span className="text-amber-300 font-black text-xs">×</span>
+              <span className="w-5 h-5 rounded-md bg-fuchsia-700/90 text-white font-mono text-[10px] font-black flex items-center justify-center border border-fuchsia-400/50">
+                6
+              </span>
+              <span className="text-emerald-400 font-black text-xs">=</span>
+              <span className="px-1.5 h-5 rounded-md bg-amber-500 text-slate-950 font-mono text-[10px] font-black flex items-center justify-center border border-white">
+                24
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+
     default:
       return null;
   }

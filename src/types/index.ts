@@ -4,10 +4,16 @@ export type GameId =
   | 'turn-taking'
   | 'aac-trainer'
   | 'request-help'
-  | 'echoic-lab';
+  | 'echoic-lab'
+  | 'cosmic-fuel'
+  | 'meteor-array'
+  | 'number-forge';
+
+export type WorldSector = 'behavior' | 'math';
 
 export interface GameMetadata {
   id: GameId;
+  sector?: WorldSector;
   number: number;
   title: string;
   category: string;
