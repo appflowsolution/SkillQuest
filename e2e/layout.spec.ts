@@ -77,4 +77,25 @@ test.describe('Layout & Tablet Viewport Guards', () => {
     );
     expect(overflowX, 'Time Warp must have zero horizontal overflow').toBeLessThanOrEqual(2);
   });
+
+  test('Cosmic Fuel Lab: Reactor, rocket and controls fit snug on standard iPad (1024x768)', async ({ pageWithAudio: page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+
+    // Navigate to Math Sector and into Cosmic Fuel Lab
+    await page.getByRole('button', { name: /SECTOR 2: MATH ACADEMY/i }).click();
+    const fuelCard = page.locator('.perspective-1000').filter({ hasText: /Cosmic Fuel Lab/i });
+    await fuelCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    await expect(page.getByText(/REACTOR CALIBRATION/i)).toBeVisible();
+
+    const overflowX = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflowX, 'Cosmic Fuel Lab must have zero horizontal overflow').toBeLessThanOrEqual(2);
+
+    const overflowY = await page.evaluate(
+      () => document.documentElement.scrollHeight - document.documentElement.clientHeight
+    );
+    expect(overflowY, 'Cosmic Fuel Lab outer window must fit inside screen without browser scroll').toBeLessThanOrEqual(2);
+  });
 });

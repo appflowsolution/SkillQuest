@@ -63,4 +63,50 @@ test.describe('Game Navigation & Flow Suite', () => {
     await missionHubBtn.click();
     await expect(page.getByRole('heading', { name: /CHOOSE YOUR QUEST/i })).toBeVisible();
   });
+
+  test('should enter Cosmic Fuel Lab, calibrate energy cells (+5, +5, -2), launch rocket, and return', async ({ pageWithAudio: page }) => {
+    // 1. Switch to Sector 2: Math Academy
+    await page.getByRole('button', { name: /SECTOR 2: MATH ACADEMY/i }).click();
+    await expect(page.getByText(/Cosmic Fuel Lab/i)).toBeVisible();
+
+    // 2. Click Cosmic Fuel Lab card
+    const fuelCard = page.locator('.perspective-1000').filter({ hasText: /Cosmic Fuel Lab/i });
+    await fuelCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    // 3. Verify Cosmic Fuel UI
+    await expect(page.getByText(/REACTOR CALIBRATION/i)).toBeVisible();
+    await expect(page.getByText(/MOON BASE ALPHA/i)).toBeVisible();
+    await expect(page.getByText(/TARGET:/i)).toBeVisible();
+    await expect(page.getByText(/NEED \+8 MW/i)).toBeVisible();
+
+    // Launch button should be disabled initially
+    const launchBtn = page.getByRole('button', { name: /CALIBRATE TO LAUNCH/i });
+    await expect(launchBtn).toBeDisabled();
+
+    // 4. Inject +5 MW
+    await page.getByRole('button', { name: /\+5/i }).first().click();
+    await expect(page.getByText(/NEED \+3 MW/i)).toBeVisible();
+
+    // 5. Inject +5 MW again -> 10 MW (overcharge!)
+    await page.getByRole('button', { name: /\+5/i }).first().click();
+    await expect(page.getByText(/OVERCHARGE \(\+2 MW\)/i)).toBeVisible();
+
+    // 6. Use safety purge valve -2 MW -> 8 MW (exact match!)
+    await page.getByRole('button', { name: /-2/i }).first().click();
+    await expect(page.getByText(/CALIBRATED! READY TO LAUNCH/i)).toBeVisible();
+
+    // 7. Launch rocket
+    const ignitionBtn = page.getByRole('button', { name: /IGNITION • LAUNCH/i });
+    await expect(ignitionBtn).toBeEnabled();
+    await ignitionBtn.click();
+
+    // 8. Verify victory modal
+    await expect(page.getByRole('heading', { name: /MISSION ACCOMPLISHED!/i })).toBeVisible();
+    await expect(page.getByText(/Rocket launched successfully/i)).toBeVisible();
+
+    // 9. Return to Mission Hub
+    const returnBtn = page.getByRole('button', { name: /Mission Hub/i }).last();
+    await returnBtn.click();
+    await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS|CHOOSE YOUR QUEST/i })).toBeVisible();
+  });
 });
