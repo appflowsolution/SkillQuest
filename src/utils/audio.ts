@@ -7,6 +7,9 @@ class SoundEngine {
   private currentAacAudio: HTMLAudioElement | null = null;
   private audioBufferCache: Map<string, AudioBuffer> = new Map();
   private activeBufferSource: AudioBufferSourceNode | null = null;
+  private idleOsc1: OscillatorNode | null = null;
+  private idleOsc2: OscillatorNode | null = null;
+  private idleGain: GainNode | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -156,7 +159,10 @@ class SoundEngine {
 
   public setMuted(muted: boolean) {
     this.isMuted = muted;
-    if (muted) this.stopAac();
+    if (muted) {
+      this.stopAac();
+      this.stopRocketIdle();
+    }
   }
 
   public getMuted(): boolean {
@@ -758,24 +764,116 @@ class SoundEngine {
     }
   }
 
-  // Cosmic Fuel: Ignición y despegue del cohete
+  // Cosmic Fuel: Rumor sordo y vibración de cohete en rampa listo para arrancar (idle rumble)
+  public startRocketIdle() {
+    if (this.isMuted) return;
+    this.stopRocketIdle();
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      // Frecuencias graves combinadas (52 Hz y 74 Hz) simulando turbobombas criogénicas
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(52, this.ctx.currentTime);
+
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(74, this.ctx.currentTime);
+
+      // Filtro pasa-bajos que da la textura sorda y retumbante de motor
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(140, this.ctx.currentTime);
+
+      // Volumen ambiental suave y agradable
+      gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.045, this.ctx.currentTime + 0.8);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc1.start();
+      osc2.start();
+
+      this.idleOsc1 = osc1;
+      this.idleOsc2 = osc2;
+      this.idleGain = gain;
+    } catch {
+      // Silent
+    }
+  }
+
+  public stopRocketIdle() {
+    try {
+      if (this.idleGain && this.ctx) {
+        this.idleGain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 0.25);
+      }
+      setTimeout(() => {
+        try {
+          if (this.idleOsc1) {
+            this.idleOsc1.stop();
+            this.idleOsc1.disconnect();
+            this.idleOsc1 = null;
+          }
+          if (this.idleOsc2) {
+            this.idleOsc2.stop();
+            this.idleOsc2.disconnect();
+            this.idleOsc2 = null;
+          }
+          if (this.idleGain) {
+            this.idleGain.disconnect();
+            this.idleGain = null;
+          }
+        } catch { /* ignore */ }
+      }, 300);
+    } catch {
+      // Silent
+    }
+  }
+
+  // Cosmic Fuel: Ignición y despegue atronador del cohete con estruendo expansivo
   public playRocketLaunch() {
+    this.stopRocketIdle();
     if (this.isMuted) return;
     try {
       this.initContext();
       if (!this.ctx) return;
       const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(90, now);
-      osc.frequency.linearRampToValueAtTime(440, now + 1.2);
-      gain.gain.setValueAtTime(0.22, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now);
-      osc.stop(now + 1.2);
+
+      // Capa 1: Retumbo y vibración profunda (rumble)
+      const oscLow = this.ctx.createOscillator();
+      const gainLow = this.ctx.createGain();
+      oscLow.type = 'sawtooth';
+      oscLow.frequency.setValueAtTime(65, now);
+      oscLow.frequency.linearRampToValueAtTime(260, now + 1.8);
+
+      gainLow.gain.setValueAtTime(0.28, now);
+      gainLow.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+      oscLow.connect(gainLow);
+      gainLow.connect(this.ctx.destination);
+      oscLow.start(now);
+      oscLow.stop(now + 2.0);
+
+      // Capa 2: Rugido de plasma sónico ascendente (flame jet)
+      const oscJet = this.ctx.createOscillator();
+      const gainJet = this.ctx.createGain();
+      oscJet.type = 'triangle';
+      oscJet.frequency.setValueAtTime(140, now);
+      oscJet.frequency.exponentialRampToValueAtTime(680, now + 1.6);
+
+      gainJet.gain.setValueAtTime(0.22, now);
+      gainJet.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+
+      oscJet.connect(gainJet);
+      gainJet.connect(this.ctx.destination);
+      oscJet.start(now);
+      oscJet.stop(now + 1.8);
     } catch {
       // Silent
     }

@@ -97,7 +97,14 @@ export const CosmicFuelGame = ({ onExit }: CosmicFuelGameProps) => {
   const isCalibrated = currentFuel === target;
   const isOvercharged = currentFuel > target;
 
-  // Sound cue on state change
+  // Sound cues and idle engine rumble lifecycle while waiting on the pad
+  useEffect(() => {
+    soundEngine.startRocketIdle();
+    return () => {
+      soundEngine.stopRocketIdle();
+    };
+  }, []);
+
   useEffect(() => {
     if (isCalibrated && !isLaunching) {
       soundEngine.playSuccess();
@@ -173,6 +180,7 @@ export const CosmicFuelGame = ({ onExit }: CosmicFuelGameProps) => {
     setEquationTokens([]);
     setIsBoostActive(false);
     setLevelIndex(prev => prev + 1);
+    soundEngine.startRocketIdle();
   };
 
   const liquidPercentage = Math.min(
@@ -266,82 +274,260 @@ export const CosmicFuelGame = ({ onExit }: CosmicFuelGameProps) => {
             )}
           </div>
 
-          {/* Spaceship Launch Visualization */}
-          <div className="w-full flex-1 flex flex-col items-center justify-center relative min-h-[160px] md:min-h-[220px]">
-            {/* Stars launch stream */}
-            {isLaunching && (
-              <div className="absolute inset-0 pointer-events-none overflow-hidden flex flex-col items-center">
-                <div className="w-1 h-20 bg-white/60 blur-xs animate-ping"></div>
+          {/* Spaceship Launch Visualization with Cryogenic Steam & Fire Exhaust */}
+          <div className="w-full flex-1 flex flex-col items-center justify-center relative min-h-[180px] md:min-h-[240px] overflow-visible">
+            
+            {/* Launchpad Cryogenic LOX Steam Venting (Active while idling/waiting) */}
+            {!isLaunching && (
+              <div className="absolute inset-x-0 bottom-6 flex justify-center items-center pointer-events-none z-15">
+                {/* Left umbilical vent wisp */}
+                <div className="absolute left-1/2 -translate-x-14 bottom-12 w-6 h-6 rounded-full bg-white/40 blur-[2px] animate-cryo-vent"></div>
+                <div className="absolute left-1/2 -translate-x-16 bottom-14 w-8 h-8 rounded-full bg-sky-200/30 blur-[3px] animate-cryo-vent [animation-delay:0.8s]"></div>
+                
+                {/* Right umbilical vent wisp */}
+                <div className="absolute left-1/2 translate-x-8 bottom-12 w-6 h-6 rounded-full bg-white/40 blur-[2px] animate-cryo-vent [animation-delay:0.4s]"></div>
+                <div className="absolute left-1/2 translate-x-10 bottom-14 w-8 h-8 rounded-full bg-sky-200/30 blur-[3px] animate-cryo-vent [animation-delay:1.2s]"></div>
+
+                {/* Base pad cryogenic ground fog */}
+                <div className="absolute bottom-1 w-36 h-6 bg-gradient-to-t from-white/30 to-transparent rounded-full blur-[4px] animate-pulse"></div>
               </div>
             )}
 
-            {/* Rocket Container with dynamic transform on launch */}
-            <div className={`relative transition-all duration-1000 ${
+            {/* Launch Fire and Trench Smoke Clouds (Active when launching) */}
+            {isLaunching && (
+              <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20 flex flex-col items-center">
+                {/* Flame Trench Exhaust Smoke Billowing Outward */}
+                <div className="relative w-full h-24 flex items-center justify-center">
+                  <div className="absolute w-24 h-24 rounded-full bg-gradient-to-t from-slate-200/80 via-amber-200/50 to-transparent blur-md animate-smoke-billow"></div>
+                  <div className="absolute -left-4 bottom-2 w-20 h-20 rounded-full bg-slate-300/70 blur-md animate-smoke-billow [animation-delay:0.2s]"></div>
+                  <div className="absolute -right-4 bottom-2 w-20 h-20 rounded-full bg-slate-300/70 blur-md animate-smoke-billow [animation-delay:0.4s]"></div>
+                  <div className="absolute bottom-4 w-28 h-16 bg-amber-400/30 rounded-full blur-lg animate-pulse"></div>
+
+                  {/* Spark Particles */}
+                  <div className="absolute -top-4 w-1.5 h-1.5 bg-yellow-300 rounded-full animate-ping"></div>
+                  <div className="absolute -top-6 left-1/3 w-1 h-1 bg-amber-200 rounded-full animate-ping [animation-delay:0.3s]"></div>
+                  <div className="absolute -top-8 right-1/3 w-2 h-2 bg-orange-400 rounded-full animate-ping [animation-delay:0.15s]"></div>
+                </div>
+              </div>
+            )}
+
+            {/* Realistic Aerospace Rocket with Multi-layer Shading & Textures */}
+            <div className={`relative z-10 transition-all duration-1000 ${
               isLaunching 
-                ? '-translate-y-[200%] scale-75 opacity-20' 
+                ? '-translate-y-[220%] scale-90 opacity-20' 
                 : isOvercharged 
-                  ? 'animate-[shake_0.4s_infinite]' 
+                  ? 'animate-[shake_0.35s_infinite]' 
                   : isCalibrated 
                     ? 'scale-105' 
                     : ''
             }`}>
-              <svg viewBox="0 0 160 220" className="w-32 md:w-44 h-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]">
+              <svg viewBox="0 0 180 260" className="w-36 md:w-48 h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.7)]">
                 <defs>
-                  <linearGradient id="rocketBody" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="60%" stopColor="#e2e8f0" />
-                    <stop offset="100%" stopColor="#94a3b8" />
+                  {/* Fuselage Titanium & Carbon Gradients */}
+                  <linearGradient id="aeroFuselage" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#94a3b8" />
+                    <stop offset="25%" stopColor="#f8fafc" />
+                    <stop offset="65%" stopColor="#cbd5e1" />
+                    <stop offset="100%" stopColor="#475569" />
                   </linearGradient>
-                  <linearGradient id="rocketWing" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#0284c7" />
+
+                  <linearGradient id="aeroNose" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="45%" stopColor="#0284c7" />
                     <stop offset="100%" stopColor="#0369a1" />
                   </linearGradient>
-                  <linearGradient id="thrustFire" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ffd000" />
-                    <stop offset="50%" stopColor="#ff5722" />
-                    <stop offset="100%" stopColor="#00f2fe" />
+
+                  <linearGradient id="aeroWings" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#0284c7" />
+                    <stop offset="60%" stopColor="#0369a1" />
+                    <stop offset="100%" stopColor="#075985" />
                   </linearGradient>
+
+                  <linearGradient id="glassCanopy" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="50%" stopColor="#0284c7" />
+                    <stop offset="85%" stopColor="#082f49" />
+                    <stop offset="100%" stopColor="#020617" />
+                  </linearGradient>
+
+                  <linearGradient id="nozzleMetal" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#1e293b" />
+                    <stop offset="40%" stopColor="#475569" />
+                    <stop offset="70%" stopColor="#334155" />
+                    <stop offset="100%" stopColor="#0f172a" />
+                  </linearGradient>
+
+                  {/* Supersonic Flame Gradients */}
+                  <linearGradient id="machFlame" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="25%" stopColor="#38bdf8" />
+                    <stop offset="65%" stopColor="#0284c7" />
+                    <stop offset="100%" stopColor="transparent" />
+                  </linearGradient>
+
+                  <linearGradient id="thermalFlame" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="15%" stopColor="#ffd000" />
+                    <stop offset="50%" stopColor="#ff5722" />
+                    <stop offset="85%" stopColor="#dc2626" />
+                    <stop offset="100%" stopColor="transparent" />
+                  </linearGradient>
+
+                  {/* Filter glow for engines */}
+                  <filter id="engineGlow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
                 </defs>
 
-                {/* Left Fin */}
-                <path d="M 40 140 L 15 180 L 45 170 Z" fill="url(#rocketWing)" />
-                {/* Right Fin */}
-                <path d="M 120 140 L 145 180 L 115 170 Z" fill="url(#rocketWing)" />
+                {/* Left Swept Delta Wing with Flap Seams */}
+                <path d="M 46 145 L 14 195 L 48 185 Z" fill="url(#aeroWings)" stroke="#0369a1" strokeWidth="1.5" />
+                <line x1="26" y1="188" x2="44" y2="183" stroke="#38bdf8" strokeWidth="1" opacity="0.6" />
 
-                {/* Main Fuselage */}
-                <path d="M 80 15 Q 120 70 120 165 L 40 165 Q 40 70 80 15 Z" fill="url(#rocketBody)" stroke="#0284c7" strokeWidth="2.5" />
+                {/* Right Swept Delta Wing with Flap Seams */}
+                <path d="M 134 145 L 166 195 L 132 185 Z" fill="url(#aeroWings)" stroke="#0369a1" strokeWidth="1.5" />
+                <line x1="154" y1="188" x2="136" y2="183" stroke="#38bdf8" strokeWidth="1" opacity="0.6" />
 
-                {/* Cabin Window with Astronaut Helmet */}
-                <circle cx="80" cy="85" r="22" fill="#0369a1" stroke="#38bdf8" strokeWidth="3" />
-                <circle cx="80" cy="85" r="16" fill="#0f172a" />
-                <circle cx="76" cy="80" r="4" fill="#38bdf8" opacity="0.9" />
+                {/* Main Fuselage Body with Aerodynamic Contours */}
+                <path 
+                  d="M 90 22 Q 136 78 136 178 L 44 178 Q 44 78 90 22 Z" 
+                  fill="url(#aeroFuselage)" 
+                  stroke="#334155" 
+                  strokeWidth="2" 
+                />
 
-                {/* Power Core Light on Rocket Body */}
+                {/* Aerodynamic Nose Cone Heat Shield Cap & Probe */}
+                <path d="M 90 8 L 90 22" stroke="#e2e8f0" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M 90 22 Q 110 50 114 65 L 66 65 Q 70 50 90 22 Z" fill="url(#aeroNose)" />
+
+                {/* Fuselage Panel Seams & Rivet Rows */}
+                <line x1="50" y1="108" x2="130" y2="108" stroke="#64748b" strokeWidth="1.2" opacity="0.8" />
+                <line x1="46" y1="146" x2="134" y2="146" stroke="#64748b" strokeWidth="1.2" opacity="0.8" />
+                
+                {/* Black & White Roll Pattern Hazard Decal */}
+                <rect x="45" y="156" width="90" height="6" fill="#0f172a" opacity="0.8" />
+                <rect x="58" y="156" width="16" height="6" fill="#f8fafc" />
+                <rect x="90" y="156" width="16" height="6" fill="#f8fafc" />
+                <rect x="120" y="156" width="12" height="6" fill="#f8fafc" />
+
+                {/* Thermal Shield Ceramic Tiles Base */}
+                <path d="M 44 164 L 136 164 L 132 178 L 48 178 Z" fill="#1e293b" />
+                <line x1="68" y1="164" x2="68" y2="178" stroke="#334155" strokeWidth="1" />
+                <line x1="90" y1="164" x2="90" y2="178" stroke="#334155" strokeWidth="1" />
+                <line x1="112" y1="164" x2="112" y2="178" stroke="#334155" strokeWidth="1" />
+
+                {/* Side Reaction Control Thrusters (RCS Quads) */}
+                <rect x="42" y="80" width="4" height="8" rx="1.5" fill="#334155" />
+                <rect x="134" y="80" width="4" height="8" rx="1.5" fill="#334155" />
+
+                {/* Panoramic Glass Canopy Cockpit */}
+                <ellipse cx="90" cy="88" rx="20" ry="24" fill="url(#glassCanopy)" stroke="#0ea5e9" strokeWidth="2.5" />
+                {/* Canopy Specular Glare */}
+                <path d="M 76 74 Q 90 70 102 78 Q 88 82 76 74 Z" fill="#ffffff" opacity="0.6" />
+
+                {/* Astronaut Pilot Silhouette inside Cockpit */}
+                <circle cx="90" cy="88" r="11" fill="#020617" />
+                {/* Gold Reflective Helmet Visor */}
+                <ellipse cx="90" cy="87" rx="7" ry="5" fill="#ffd000" stroke="#f59e0b" strokeWidth="1" />
+                <circle cx="88" cy="85" r="1.5" fill="#ffffff" opacity="0.9" />
+
+                {/* Illuminated Flight Telemetry HUD Console */}
+                <rect x="76" y="99" width="28" height="6" rx="2" fill="#020617" stroke="#0284c7" strokeWidth="1" />
+                <circle cx="82" cy="102" r="1.2" fill="#4ade80" />
+                <circle cx="87" cy="102" r="1.2" fill="#38bdf8" />
+                <circle cx="92" cy="102" r="1.2" fill="#ffd000" />
+                <circle cx="97" cy="102" r="1.2" fill="#f43f5e" />
+
+                {/* Central Reactor Power Conduit Indicator */}
                 <circle 
-                  cx="80" 
+                  cx="90" 
                   cy="130" 
-                  r="10" 
-                  fill={isCalibrated ? '#4ade80' : isOvercharged ? '#f43f5e' : '#38bdf8'} 
+                  r="9" 
+                  fill={isCalibrated ? '#10b981' : isOvercharged ? '#f43f5e' : '#0284c7'} 
+                  stroke={isCalibrated ? '#34d399' : isOvercharged ? '#fb7185' : '#38bdf8'}
+                  strokeWidth="2"
                   className={isCalibrated ? 'animate-pulse' : ''}
                 />
-                <circle cx="80" cy="130" r="5" fill="#ffffff" />
+                <circle cx="90" cy="130" r="4.5" fill="#ffffff" />
 
-                {/* Thruster Nozzle */}
-                <path d="M 60 165 L 100 165 L 108 180 L 52 180 Z" fill="#334155" stroke="#1e293b" strokeWidth="2" />
+                {/* Cryogenic Propellant Lines */}
+                <line x1="64" y1="108" x2="64" y2="156" stroke="#0ea5e9" strokeWidth="1.5" strokeDasharray="3,2" />
+                <line x1="116" y1="108" x2="116" y2="156" stroke="#0ea5e9" strokeWidth="1.5" strokeDasharray="3,2" />
 
-                {/* Thruster Plume Flame (Visible when calibrated or launching) */}
-                {(isCalibrated || isLaunching) && (
-                  <path 
-                    d="M 58 180 Q 80 230 102 180 Q 80 205 58 180 Z" 
-                    fill="url(#thrustFire)" 
-                    className="animate-pulse"
-                  />
+                {/* Dual Bell Rocket Engines with Cooling Manifolds */}
+                {/* Left Engine Bell */}
+                <path d="M 64 178 L 78 178 L 82 195 L 60 195 Z" fill="url(#nozzleMetal)" stroke="#0f172a" strokeWidth="1.5" />
+                <line x1="62" y1="184" x2="80" y2="184" stroke="#64748b" strokeWidth="1" />
+                
+                {/* Right Engine Bell */}
+                <path d="M 102 178 L 116 178 L 120 195 L 98 195 Z" fill="url(#nozzleMetal)" stroke="#0f172a" strokeWidth="1.5" />
+                <line x1="100" y1="184" x2="118" y2="184" stroke="#64748b" strokeWidth="1" />
+
+                {/* PRE-LAUNCH IGNITION GLOW (Calibrated State) */}
+                {isCalibrated && !isLaunching && (
+                  <g filter="url(#engineGlow)">
+                    <ellipse cx="71" cy="197" rx="9" ry="7" fill="#ffd000" className="animate-pulse" />
+                    <ellipse cx="109" cy="197" rx="9" ry="7" fill="#ffd000" className="animate-pulse" />
+                  </g>
+                )}
+
+                {/* FULL BLAST LIFTOFF ENGINE EXHAUST (When Launching) */}
+                {isLaunching && (
+                  <g className="animate-flame-flicker">
+                    {/* Outer Supersonic Thermal Shock Diamond Plume */}
+                    <path 
+                      d="M 56 195 Q 71 280 71 310 Q 71 280 86 195 Z" 
+                      fill="url(#thermalFlame)" 
+                      filter="url(#engineGlow)"
+                    />
+                    <path 
+                      d="M 94 195 Q 109 280 109 310 Q 109 280 124 195 Z" 
+                      fill="url(#thermalFlame)" 
+                      filter="url(#engineGlow)"
+                    />
+
+                    {/* Inner Mach Diamonds Core (Electric Blue & White-Hot) */}
+                    <path 
+                      d="M 63 195 Q 71 250 71 270 Q 71 250 79 195 Z" 
+                      fill="url(#machFlame)" 
+                    />
+                    <path 
+                      d="M 101 195 Q 109 250 109 270 Q 109 250 117 195 Z" 
+                      fill="url(#machFlame)" 
+                    />
+                    
+                    {/* Diamond Shock Points */}
+                    <polygon points="71,215 74,222 71,229 68,222" fill="#ffffff" />
+                    <polygon points="71,235 73,240 71,245 69,240" fill="#ffffff" />
+                    <polygon points="109,215 112,222 109,229 106,222" fill="#ffffff" />
+                    <polygon points="109,235 111,240 109,245 107,240" fill="#ffffff" />
+                  </g>
                 )}
               </svg>
             </div>
 
-            {/* Launchpad Platform Base */}
-            <div className="w-44 h-3 bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 rounded-t-md shadow-md border-t border-slate-400/40"></div>
+            {/* Launchpad Platform Base with Gantry Clamps & Flame Deflector */}
+            <div className="relative w-48 z-10 flex flex-col items-center">
+              {/* Umbilical Gantry Hold-down Clamps */}
+              <div className="w-full flex justify-between px-2 -mb-1 z-20">
+                <div className="w-3.5 h-7 bg-slate-600 rounded-t border-t-2 border-amber-400 flex flex-col justify-around py-0.5">
+                  <div className="w-full h-0.5 bg-amber-400"></div>
+                  <div className="w-full h-0.5 bg-slate-900"></div>
+                </div>
+                <div className="w-3.5 h-7 bg-slate-600 rounded-t border-t-2 border-amber-400 flex flex-col justify-around py-0.5">
+                  <div className="w-full h-0.5 bg-amber-400"></div>
+                  <div className="w-full h-0.5 bg-slate-900"></div>
+                </div>
+              </div>
+
+              {/* Steel Launch Table with Warning Hazard Stripe */}
+              <div className="w-48 h-4 bg-gradient-to-r from-slate-800 via-slate-600 to-slate-800 rounded-t-lg shadow-xl border-t border-slate-400/50 relative overflow-hidden flex items-center justify-center">
+                <div className="w-full h-1.5 bg-[repeating-linear-gradient(45deg,#f59e0b,#f59e0b_8px,#1e293b_8px,#1e293b_16px)] opacity-70"></div>
+              </div>
+
+              {/* Flame Deflector Trench Base */}
+              <div className="w-40 h-2 bg-slate-950/80 rounded-b border-b border-slate-700/60 shadow-inner"></div>
+            </div>
           </div>
 
           {/* Big Launch Throttle Button */}
