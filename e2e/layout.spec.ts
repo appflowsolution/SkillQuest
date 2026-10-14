@@ -98,4 +98,31 @@ test.describe('Layout & Tablet Viewport Guards', () => {
     );
     expect(overflowY, 'Cosmic Fuel Lab outer window must fit inside screen without browser scroll').toBeLessThanOrEqual(2);
   });
+
+  test('Meteor Array Blaster: Radar, reticle, and steppers fit snug on iPad 9th Gen (1080x810) and Standard (1024x768)', async ({ pageWithAudio: page }) => {
+    for (const { width, height, name } of [
+      { width: 1080, height: 810, name: 'iPad 9th Gen (1080x810)' },
+      { width: 1024, height: 768, name: 'iPad Standard (1024x768)' },
+    ]) {
+      await page.setViewportSize({ width, height });
+
+      // Navigate to Math Sector and into Meteor Array Blaster
+      await page.goto('/');
+      await page.getByRole('button', { name: /SECTOR 2: MATH ACADEMY/i }).click();
+      const arrayCard = page.locator('.perspective-1000').filter({ hasText: /Meteor Array Blaster/i });
+      await arrayCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+      await expect(page.getByText(/SWARM TARGET/i)).toBeVisible();
+
+      const overflowX = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect(overflowX, `Meteor Array Blaster must have zero horizontal overflow on ${name}`).toBeLessThanOrEqual(2);
+
+      const overflowY = await page.evaluate(
+        () => document.documentElement.scrollHeight - document.documentElement.clientHeight
+      );
+      expect(overflowY, `Meteor Array Blaster outer window must fit inside screen without browser scroll on ${name}`).toBeLessThanOrEqual(2);
+    }
+  });
 });

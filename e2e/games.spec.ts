@@ -111,4 +111,39 @@ test.describe('Game Navigation & Flow Suite', () => {
     await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
     await expect(page.getByText(/Meteor Array Blaster/i)).toBeVisible();
   });
+
+  test('should enter Meteor Array Blaster, adjust rows/cols, vaporize swarm, and return', async ({ pageWithAudio: page }) => {
+    // 1. Switch to Sector 2: Math Academy
+    await page.getByRole('button', { name: /SECTOR 2: MATH ACADEMY/i }).click();
+    await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
+
+    // 2. Click on Meteor Array Blaster card
+    const arrayCard = page.locator('.perspective-1000').filter({ hasText: /Meteor Array Blaster/i });
+    await arrayCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    // 3. Verify game HUD and level 1 swarm target
+    await expect(page.getByText(/LUNAR OUTPOST ALPHA/i)).toBeVisible();
+    await expect(page.getByText(/6 METEORS/i)).toBeVisible();
+
+    // 4. Default rows=2, cols=3 => 2 * 3 = 6 CELLS
+    await expect(page.getByText('ROWS:').first()).toBeVisible();
+    await expect(page.getByText('COLS:').first()).toBeVisible();
+    await expect(page.getByText(/6 CELLS/i)).toBeVisible();
+
+    // 5. Fire matrix beam
+    const fireBtn = page.getByRole('button', { name: /FIRE MATRIX BEAM/i });
+    await expect(fireBtn).toBeVisible();
+    await fireBtn.click();
+
+    // 6. Verify swarm vaporized
+    await expect(page.getByText(/SWARM VAPORIZED!/i)).toBeVisible();
+
+    // 7. Return to Mission Hub
+    const returnBtn = page.getByRole('button', { name: /Mission Hub/i }).first();
+    await returnBtn.click();
+
+    // 8. Assert returned to Sector 2: Math Academy
+    await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
+    await expect(page.getByText(/Meteor Array Blaster/i)).toBeVisible();
+  });
 });
