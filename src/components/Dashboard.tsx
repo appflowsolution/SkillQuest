@@ -32,19 +32,28 @@ export const Dashboard = ({
   const [internalSector, setInternalSector] = useState<WorldSector>(controlledSector ?? 'behavior');
   // Track which cards are flipped (to show the skill explanation)
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
+  const [slideDirection, setSlideDirection] = useState<'right' | 'left'>('right');
+  const [portalFlashKey, setPortalFlashKey] = useState(0);
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Sync internal sector if controlledSector prop changes
   useEffect(() => {
     if (controlledSector && controlledSector !== internalSector) {
+      setSlideDirection(controlledSector === 'math' ? 'right' : 'left');
       setInternalSector(controlledSector);
     }
   }, [controlledSector]);
 
   const activeSector = controlledSector ?? internalSector;
 
-  // Swipe gesture tracking
+  // Swipe & pointer gesture tracking (iPad Touch + PC Mouse Drag + Trackpad Wheel)
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const mouseStartX = useRef<number | null>(null);
+  const mouseStartY = useRef<number | null>(null);
+  const hasDraggedRef = useRef(false);
+  const lastWheelSwitchRef = useRef(0);
 
   const toggleFlip = (gameId: string) => {
     setFlippedCards(prev => ({
@@ -55,7 +64,9 @@ export const Dashboard = ({
 
   const switchSector = (sector: WorldSector) => {
     if (sector !== activeSector) {
-      soundEngine.playTap();
+      setSlideDirection(sector === 'math' ? 'right' : 'left');
+      setPortalFlashKey(prev => prev + 1);
+      soundEngine.playSectorWarp(sector === 'math');
       setInternalSector(sector);
       onSectorChange?.(sector);
     }
@@ -64,9 +75,28 @@ export const Dashboard = ({
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+    hasDraggedRef.current = false;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.touches[0].clientX - touchStartX.current;
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+
+    if (Math.abs(deltaX) > 12 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      hasDraggedRef.current = true;
+      // Apply elastic resistance if dragging past outer edges
+      const isInvalidEdge =
+        (activeSector === 'behavior' && deltaX > 0) ||
+        (activeSector === 'math' && deltaX < 0);
+      setDragOffsetX(isInvalidEdge ? deltaX * 0.18 : deltaX * 0.55);
+    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    setIsDragging(false);
+    setDragOffsetX(0);
     if (touchStartX.current === null || touchStartY.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
     const deltaY = e.changedTouches[0].clientY - touchStartY.current;
@@ -83,6 +113,61 @@ export const Dashboard = ({
     }
     touchStartX.current = null;
     touchStartY.current = null;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    mouseStartX.current = e.clientX;
+    mouseStartY.current = e.clientY;
+    hasDraggedRef.current = false;
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (mouseStartX.current === null || mouseStartY.current === null) return;
+    const deltaX = e.clientX - mouseStartX.current;
+    const deltaY = e.clientY - mouseStartY.current;
+
+    if (Math.abs(deltaX) > 14 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      hasDraggedRef.current = true;
+      const isInvalidEdge =
+        (activeSector === 'behavior' && deltaX > 0) ||
+        (activeSector === 'math' && deltaX < 0);
+      setDragOffsetX(isInvalidEdge ? deltaX * 0.18 : deltaX * 0.5);
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (mouseStartX.current !== null && mouseStartY.current !== null) {
+      const deltaX = e.clientX - mouseStartX.current;
+      const deltaY = e.clientY - mouseStartY.current;
+
+      if (Math.abs(deltaX) > 55 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+        if (deltaX < 0 && activeSector === 'behavior') {
+          switchSector('math');
+        } else if (deltaX > 0 && activeSector === 'math') {
+          switchSector('behavior');
+        }
+      }
+    }
+    mouseStartX.current = null;
+    mouseStartY.current = null;
+    setIsDragging(false);
+    setDragOffsetX(0);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const now = Date.now();
+    if (now - lastWheelSwitchRef.current < 650) return;
+    if (Math.abs(e.deltaX) > 40 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5) {
+      if (e.deltaX > 0 && activeSector === 'behavior') {
+        lastWheelSwitchRef.current = now;
+        switchSector('math');
+      } else if (e.deltaX < 0 && activeSector === 'math') {
+        lastWheelSwitchRef.current = now;
+        switchSector('behavior');
+      }
+    }
   };
 
   // Keyboard navigation support (Arrow keys)
@@ -102,11 +187,19 @@ export const Dashboard = ({
   const visibleGames = GAMES_CATALOG.filter(
     g => (g.sector ?? 'behavior') === activeSector
   );
+  const sectorAnimClass =
+    slideDirection === 'right' ? 'animate-sector-from-right' : 'animate-sector-from-left';
 
   return (
     <div 
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
       className={`flex-1 overflow-y-auto overflow-x-hidden ${
         isMath 
           ? 'bg-gradient-to-b from-[#072448] via-[#0c2447] to-[#041226]' 
@@ -116,12 +209,24 @@ export const Dashboard = ({
       {/* Living Cosmic Starfield Background with Sector-responsive palette */}
       <CosmicBackground sector={activeSector} />
 
+      {/* Cosmic Portal Warp Sweep Overlay when switching sectors */}
+      {portalFlashKey > 0 && (
+        <div
+          key={portalFlashKey}
+          className={`pointer-events-none fixed inset-0 z-20 animate-sector-portal ${
+            isMath
+              ? 'bg-gradient-to-r from-transparent via-sky-400/20 to-indigo-500/25'
+              : 'bg-gradient-to-l from-transparent via-teal-400/20 to-emerald-500/25'
+          }`}
+        />
+      )}
+
       {/* Floating Lateral Navigation Arrows */}
       {isMath ? (
         <button
           type="button"
           onClick={() => switchSector('behavior')}
-          className="fixed left-2 md:left-5 top-1/2 -translate-y-1/2 z-30 p-2.5 md:p-3.5 rounded-full bg-[#004e63]/80 hover:bg-[#00647e] text-[#00f2c9] border border-[#00c9a7]/40 shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none"
+          className="fixed left-2 md:left-5 top-1/2 -translate-y-1/2 z-30 p-2.5 md:p-3.5 rounded-full bg-[#004e63]/80 hover:bg-[#00647e] text-[#00f2c9] border border-[#00c9a7]/40 shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none cursor-pointer"
           title="Switch to Sector 1: Focus & Behavior"
           aria-label="Previous Sector: Behavior & Focus"
         >
@@ -131,7 +236,7 @@ export const Dashboard = ({
         <button
           type="button"
           onClick={() => switchSector('math')}
-          className="fixed right-2 md:right-5 top-1/2 -translate-y-1/2 z-30 p-2.5 md:p-3.5 rounded-full bg-[#093563]/80 hover:bg-[#0e4884] text-[#38bdf8] border border-[#38bdf8]/40 shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none"
+          className="fixed right-2 md:right-5 top-1/2 -translate-y-1/2 z-30 p-2.5 md:p-3.5 rounded-full bg-[#093563]/80 hover:bg-[#0e4884] text-[#38bdf8] border border-[#38bdf8]/40 shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none cursor-pointer"
           title="Switch to Sector 2: Math & Logic"
           aria-label="Next Sector: Math & Logic"
         >
@@ -140,15 +245,15 @@ export const Dashboard = ({
       )}
 
       {/* Sector Switcher Segmented Pills & Dynamic Mission Header */}
-      <div className="max-w-5xl mx-auto text-center mb-6 pt-1 relative z-10 w-full">
+      <div className="max-w-5xl mx-auto text-center mb-4 pt-1 relative z-10 w-full">
         {/* Sector Tabs Switcher */}
         <div className="inline-flex items-center p-1 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg mb-3">
           <button
             type="button"
             onClick={() => switchSector('behavior')}
-            className={`flex items-center gap-2 px-3.5 md:px-5 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-black tracking-wide transition-all ${
+            className={`flex items-center gap-2 px-3.5 md:px-5 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-black tracking-wide transition-all duration-300 cursor-pointer ${
               !isMath
-                ? 'bg-[#004e63] text-[#00f2c9] shadow-md border border-[#00c9a7]/50'
+                ? 'bg-[#004e63] text-[#00f2c9] shadow-md border border-[#00c9a7]/50 scale-[1.02]'
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -159,9 +264,9 @@ export const Dashboard = ({
           <button
             type="button"
             onClick={() => switchSector('math')}
-            className={`flex items-center gap-2 px-3.5 md:px-5 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-black tracking-wide transition-all ${
+            className={`flex items-center gap-2 px-3.5 md:px-5 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-black tracking-wide transition-all duration-300 cursor-pointer ${
               isMath
-                ? 'bg-[#0c4a6e] text-[#38bdf8] shadow-md border border-[#38bdf8]/50'
+                ? 'bg-[#0c4a6e] text-[#38bdf8] shadow-md border border-[#38bdf8]/50 scale-[1.02]'
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -173,8 +278,15 @@ export const Dashboard = ({
           </button>
         </div>
 
-        {/* Dynamic Mission Header */}
-        <div>
+        {/* Dynamic Mission Header with Directional Slide */}
+        <div
+          key={`header-${activeSector}`}
+          className={sectorAnimClass}
+          style={{
+            transform: dragOffsetX ? `translate3d(${dragOffsetX * 0.65}px, 0, 0)` : undefined,
+            transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
+          }}
+        >
           <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${
             isMath 
               ? 'bg-[#0c4a6e]/90 border border-[#38bdf8]/50 text-[#38bdf8]' 
@@ -195,15 +307,30 @@ export const Dashboard = ({
         </div>
       </div>
 
-      {/* Adventure Game Tiles with Compact, Snug 3D Flip Cards */}
-      <div className="max-w-5xl mx-auto w-full mb-4 relative z-10">
-        <div key={activeSector} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 animate-fadeIn">
-          {visibleGames.map((game) => {
+      {/* Adventure Game Tiles with Directional Slide & Live Drag Follow */}
+      <div
+        className="max-w-5xl mx-auto w-full mb-3 relative z-10"
+        style={{
+          transform: dragOffsetX
+            ? `translate3d(${dragOffsetX}px, 0, 0) scale(${1 - Math.min(Math.abs(dragOffsetX) / 2400, 0.035)})`
+            : undefined,
+          transition: isDragging ? 'none' : 'transform 0.38s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+      >
+        <div
+          key={activeSector}
+          className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 ${sectorAnimClass}`}
+        >
+          {visibleGames.map((game, index) => {
             const isAvailable = game.isAvailable;
             const isFlipped = !!flippedCards[game.id];
 
             return (
-              <div key={game.id} className="perspective-1000 w-full h-[275px] md:h-[295px]">
+              <div
+                key={game.id}
+                className="perspective-1000 w-full h-[275px] md:h-[295px]"
+                style={{ animationDelay: `${index * 40}ms` }}
+              >
                 {/* 3D Flipping Card Container */}
                 <div
                   className={`w-full h-full relative transition-transform duration-500 preserve-3d ${
@@ -213,6 +340,10 @@ export const Dashboard = ({
                   {/* FRONT FACE: Game Cover Art (Snug, No Wasted Space) */}
                   <div
                     onClick={() => {
+                      if (hasDraggedRef.current) {
+                        hasDraggedRef.current = false;
+                        return;
+                      }
                       if (isAvailable && !isFlipped) {
                         soundEngine.playTap();
                         onSelectGame(game.id);

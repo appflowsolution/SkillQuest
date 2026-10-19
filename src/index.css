@@ -136,3 +136,81 @@
   animation: smoke-billow 1.2s infinite ease-out;
 }
 
+/* Directional Sector Screen Transitions (iPad Touch & PC Swipe/Switch) */
+@keyframes sector-enter-from-right {
+  0% {
+    opacity: 0;
+    transform: translate3d(96px, 0, 0) scale(0.96);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes sector-enter-from-left {
+  0% {
+    opacity: 0;
+    transform: translate3d(-96px, 0, 0) scale(0.96);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes sector-portal-flash {
+  0% {
+    opacity: 0.55;
+    transform: scaleX(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.35);
+  }
+}
+
+@keyframes owl-blink {
+  0%, 92%, 100% {
+    transform: scaleY(0);
+  }
+  96% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes wand-sway {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0px);
+  }
+  50% {
+    transform: rotate(-6deg) translateY(-3px);
+  }
+}
+
+.animate-sector-from-right {
+  animation: sector-enter-from-right 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-sector-from-left {
+  animation: sector-enter-from-left 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-sector-portal {
+  animation: sector-portal-flash 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-owl-blink {
+  animation: owl-blink 4.5s infinite ease-in-out;
+  transform-origin: center 116px;
+}
+
+.animate-wand-sway {
+  animation: wand-sway 2.8s infinite ease-in-out;
+  transform-origin: 155px 152px;
+}
+

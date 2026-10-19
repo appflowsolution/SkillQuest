@@ -978,6 +978,130 @@ class SoundEngine {
     }
   }
 
+  // Number Forge: Alchemy cauldron bubble sound with pitch scaled to numeric value
+  public playCauldronBubble(value = 1) {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const baseFreq = 260 + Math.min(Math.abs(value) * 14, 520);
+
+      // Two quick rising bubble pops
+      [0, 0.065].forEach((offset, i) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        const f = baseFreq * (i === 0 ? 1 : 1.35);
+        osc.frequency.setValueAtTime(f * 0.75, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(f * 1.4, now + offset + 0.09);
+
+        gain.gain.setValueAtTime(0.22, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.1);
+      });
+    } catch {
+      // Silent
+    }
+  }
+
+  // Number Forge: Mystical rune selection chime (+, -, ×)
+  public playRuneSelect(op: '+' | '-' | '×') {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      const freq = op === '×' ? 659.25 : op === '+' ? 523.25 : 392.0;
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.25, now + 0.14);
+
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {
+      // Silent
+    }
+  }
+
+  // Number Forge: Crystalline fanfare when forging the target crystal
+  public playCrystalForge() {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51]; // C5, E5, G5, C6, E6
+      notes.forEach((freq, idx) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        const start = now + idx * 0.065;
+        osc.frequency.setValueAtTime(freq, start);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.04, start + 0.38);
+
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.linearRampToValueAtTime(0.22, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.4);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.4);
+      });
+    } catch {
+      // Silent
+    }
+  }
+
+  // Dashboard Sector Transition: Smooth cosmic portal whoosh + harmonic chime
+  public playSectorWarp(toMath = true) {
+    if (this.isMuted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      const startFreq = toMath ? 280 : 520;
+      const endFreq = toMath ? 560 : 310;
+      osc.frequency.setValueAtTime(startFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.22);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.16, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    } catch {
+      // Silent
+    }
+  }
+
   private fallbackWebSpeech(text: string) {
     try {
       if ('speechSynthesis' in window) {
@@ -1001,3 +1125,4 @@ class SoundEngine {
 }
 
 export const soundEngine = new SoundEngine();
+
