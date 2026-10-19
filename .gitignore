@@ -38,5 +38,6 @@ odd/
 test-results/
 playwright-report/
 .playwright/
+.codegraph/
 
 
