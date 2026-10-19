@@ -125,4 +125,26 @@ test.describe('Layout & Tablet Viewport Guards', () => {
       expect(overflowY, `Meteor Array Blaster outer window must fit inside screen without browser scroll on ${name}`).toBeLessThanOrEqual(2);
     }
   });
+
+  test('Number Forge Alchemist: Cauldron, owl, gems, and runes fit snug on standard iPad (1024x768)', async ({ pageWithAudio: page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+
+    // Navigate to Math Sector and into Number Forge Alchemist
+    await page.getByRole('button', { name: /SECTOR 2: MATH ACADEMY/i }).click();
+    const forgeCard = page.locator('.perspective-1000').filter({ hasText: /Number Forge Alchemist/i });
+    await forgeCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    await expect(page.getByText(/STARLIGHT SANCTUM/i)).toBeVisible();
+
+    const overflowX = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(overflowX, 'Number Forge Alchemist must have zero horizontal overflow').toBeLessThanOrEqual(2);
+
+    const overflowY = await page.evaluate(
+      () => document.documentElement.scrollHeight - document.documentElement.clientHeight
+    );
+    expect(overflowY, 'Number Forge Alchemist outer window must fit inside screen without browser scroll').toBeLessThanOrEqual(2);
+  });
 });
+

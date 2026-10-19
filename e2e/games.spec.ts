@@ -146,4 +146,40 @@ test.describe('Game Navigation & Flow Suite', () => {
     await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
     await expect(page.getByText(/Meteor Array Blaster/i)).toBeVisible();
   });
+
+  test('should enter Number Forge Alchemist, transmute gems in cauldron (3 + 4 = 7), forge crystal, and return', async ({ pageWithAudio: page }) => {
+    // 1. Switch to Sector 2: Math Academy
+    await page.getByRole('button', { name: /SECTOR 2: MATH ACADEMY/i }).click();
+    await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
+
+    // 2. Click on Number Forge Alchemist card
+    const forgeCard = page.locator('.perspective-1000').filter({ hasText: /Number Forge Alchemist/i });
+    await forgeCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    // 3. Verify Sanctum 1 HUD and Target Crystal 7
+    await expect(page.getByText(/STARLIGHT SANCTUM/i)).toBeVisible();
+    await expect(page.getByTestId('target-crystal-value')).toHaveText('7');
+
+    // 4. Toss Gem 3 into cauldron -> select Rune + -> toss Gem 4
+    await page.getByRole('button', { name: 'Gem 3' }).click();
+    await expect(page.getByTestId('cauldron-current-value')).toHaveText('3');
+
+    await page.getByRole('button', { name: 'Rune +' }).click();
+    await page.getByRole('button', { name: 'Gem 4' }).click();
+    await expect(page.getByTestId('cauldron-current-value')).toHaveText('7');
+    await expect(page.getByText(/ELIXIR READY!/i)).toBeVisible();
+
+    // 5. Forge the crystal
+    const forgeBtn = page.getByRole('button', { name: /FORGE CRYSTAL/i });
+    await expect(forgeBtn).toBeEnabled();
+    await forgeBtn.click();
+    await expect(page.getByText(/CRYSTAL FORGED!/i).first()).toBeVisible();
+
+    // 6. Return to Mission Hub and verify Sector 2 persistence
+    const returnBtn = page.getByRole('button', { name: /Mission Hub/i }).first();
+    await returnBtn.click();
+    await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
+    await expect(page.getByText(/Number Forge Alchemist/i)).toBeVisible();
+  });
 });
+
