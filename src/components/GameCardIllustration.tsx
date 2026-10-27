@@ -15,6 +15,7 @@ const COVER_IMAGES: Record<string, string> = {
   'request-help': '/covers/request-help.webp?v=6',
   'echoic-lab': '/covers/echoic-lab.webp?v=4',
   'echo-lab': '/covers/echoic-lab.webp?v=4',
+  'memory-vault': '/covers/memory-vault.webp?v=1',
   'cosmic-fuel': '/covers/cosmic-fuel.webp?v=1',
   'meteor-array': '/covers/meteor-array.webp?v=1',
   'number-forge': '/covers/number-forge.webp?v=1',

@@ -264,6 +264,38 @@ export const GameCardIllustration: FC<GameCardIllustrationProps> = ({ gameId }) 
         </div>
       );
 
+    case 'memory-vault':
+      // Nebula Memory Vault: Sealed vault door with flipping capsule pairs
+      return (
+        <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-[#042f2e] via-[#0f3d3a] to-[#021b1b] flex items-center justify-center">
+          <div className="absolute -top-10 -left-10 w-32 h-32 bg-teal-400/25 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-cyan-500/25 rounded-full blur-2xl"></div>
+
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="grid grid-cols-2 gap-1.5 p-2 rounded-2xl bg-black/40 border-2 border-teal-400/60 shadow-lg shadow-teal-500/30">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-teal-400 to-cyan-300 border border-white/70 flex items-center justify-center text-lg">
+                ✦
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-[#01201f] border border-teal-400/40 flex items-center justify-center text-teal-300/50 text-base font-black">
+                ?
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-[#01201f] border border-teal-400/40 flex items-center justify-center text-teal-300/50 text-base font-black">
+                ?
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-amber-400 to-yellow-300 border border-white/70 flex items-center justify-center text-lg">
+                ✦
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-teal-200/90 bg-black/50 px-2 py-0.5 rounded-full border border-teal-400/40">
+                10 pairs
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+
     default:
       return null;
   }

@@ -7,7 +7,8 @@ export type GameId =
   | 'echoic-lab'
   | 'cosmic-fuel'
   | 'meteor-array'
-  | 'number-forge';
+  | 'number-forge'
+  | 'memory-vault';
 
 export type WorldSector = 'behavior' | 'math';
 
