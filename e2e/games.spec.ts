@@ -181,5 +181,140 @@ test.describe('Game Navigation & Flow Suite', () => {
     await expect(page.getByRole('heading', { name: /COSMIC MATH QUESTS/i })).toBeVisible();
     await expect(page.getByText(/Number Forge Alchemist/i)).toBeVisible();
   });
+
+  test('should enter Nebula Memory Vault, reunite a symbol pair, and return to Mission Hub', async ({ pageWithAudio: page }) => {
+    // 1. Sector 1 (Focus & Behavior) is the default sector
+    const card = page.locator('.perspective-1000').filter({ hasText: /Nebula Memory Vault/i });
+    await card.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    // 2. Verify the vault HUD for level 1
+    // The app header also renders a "Mission Hub" button, so match the vault's own
+    // distinguishable accessible name to avoid a strict-mode ambiguity.
+    await expect(page.getByRole('button', { name: /Return to Mission Hub/i })).toBeVisible();
+    await expect(page.getByText(/Vault 1\/4/i)).toBeVisible();
+    await expect(page.getByText(/Docking Bay Alpha/i)).toBeVisible();
+
+    // 3. Level 1 holds 3 pairs = 6 capsules, all face down at start
+    const capsules = page.getByTestId('vault-capsule');
+    await expect(capsules).toHaveCount(6);
+    await expect(page.locator('[data-testid="vault-capsule"][data-face-up="true"]')).toHaveCount(0);
+
+    // 4. Flip one capsule
+    await capsules.first().click();
+    await expect(page.locator('[data-testid="vault-capsule"][data-face-up="true"]')).toHaveCount(1);
+
+    // 5. Flip its twin (resolved by symbol, never by shuffle order)
+    const symbols = await capsules.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('data-symbol')),
+    );
+    const firstSymbol = symbols[0];
+    const twinIndex = symbols.findIndex((symbol, index) => index > 0 && symbol === firstSymbol);
+    expect(twinIndex, 'level 1 must contain the twin of the first capsule').toBeGreaterThan(0);
+
+    await capsules.nth(twinIndex).click();
+
+    // 6. The pair stays face up and is marked as resolved
+    await expect(page.locator('[data-testid="vault-capsule"][data-matched="true"]')).toHaveCount(2);
+    await expect(capsules.first()).toHaveAttribute('data-matched', 'true');
+    await expect(capsules.nth(twinIndex)).toHaveAttribute('data-matched', 'true');
+
+    // 7. Return to Mission Hub and stay in Sector 1
+    await page.getByRole('button', { name: /Return to Mission Hub/i }).click();
+    await expect(page.getByRole('heading', { name: /CHOOSE YOUR QUEST/i })).toBeVisible();
+    await expect(page.getByText(/Nebula Memory Vault/i)).toBeVisible();
+  });
+
+  test('should re-seal a mismatched capsule pair without penalty in Nebula Memory Vault', async ({ pageWithAudio: page }) => {
+    const card = page.locator('.perspective-1000').filter({ hasText: /Nebula Memory Vault/i });
+    await card.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    const capsules = page.getByTestId('vault-capsule');
+    await expect(capsules).toHaveCount(6);
+
+    const symbols = await capsules.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('data-symbol')),
+    );
+    const firstSymbol = symbols[0];
+    const differentIndex = symbols.findIndex((symbol) => symbol !== firstSymbol);
+    expect(differentIndex, 'level 1 must contain a different symbol').toBeGreaterThan(0);
+
+    // Flip two capsules that do not match
+    await capsules.first().click();
+    await capsules.nth(differentIndex).click();
+    await expect(page.locator('[data-testid="vault-capsule"][data-face-up="true"]')).toHaveCount(2);
+
+    // Both return face down and nothing is scored as a pair
+    await expect(page.locator('[data-testid="vault-capsule"][data-face-up="true"]')).toHaveCount(0, {
+      timeout: 5000,
+    });
+    await expect(page.locator('[data-testid="vault-capsule"][data-matched="true"]')).toHaveCount(0);
+
+    // The deck is still fully playable: the message stays honest about misses
+    await expect(page.getByText(/A mismatch is information/i)).toBeVisible();
+  });
+
+  test('should switch to two-player mode and pass the turn after a mismatch', async ({ pageWithAudio: page }) => {
+    const card = page.locator('.perspective-1000').filter({ hasText: /Nebula Memory Vault/i });
+    await card.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    // Solo mode shows a single accumulator and no turn indicator
+    await expect(page.getByTestId('mode-1p')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('turn-indicator')).toHaveCount(0);
+
+    // Switch to two players
+    await page.getByTestId('mode-2p').click();
+    await expect(page.getByTestId('mode-2p')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('turn-indicator')).toHaveText(/Player 1 turn/i);
+    await expect(page.getByTestId('score-p1')).toContainText('0');
+    await expect(page.getByTestId('score-p2')).toContainText('0');
+
+    // Player 1 fails a pair: the turn passes only once the capsules re-seal
+    const capsules = page.getByTestId('vault-capsule');
+    await expect(capsules).toHaveCount(6);
+    const symbols = await capsules.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('data-symbol')),
+    );
+    const differentIndex = symbols.findIndex((symbol) => symbol !== symbols[0]);
+    expect(differentIndex, 'level 1 must contain a different symbol').toBeGreaterThan(0);
+
+    await capsules.first().click();
+    await capsules.nth(differentIndex).click();
+
+    await expect(page.getByTestId('turn-indicator')).toHaveText(/Player 2 turn/i, { timeout: 5000 });
+    await expect(page.getByTestId('score-p2')).toContainText('0');
+  });
+
+  test('should jump straight to any vault with the level selector and celebrate a match', async ({ pageWithAudio: page }) => {
+    const card = page.locator('.perspective-1000').filter({ hasText: /Nebula Memory Vault/i });
+    await card.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+
+    const capsules = page.getByTestId('vault-capsule');
+    await expect(page.getByTestId('level-select-1')).toHaveAttribute('aria-pressed', 'true');
+
+    // Direct jump to the densest vault (5 x 4 = 20 capsules)
+    await page.getByTestId('level-select-4').click();
+    await expect(page.getByText(/Vault 4\/4/i)).toBeVisible();
+    await expect(page.getByTestId('level-select-4')).toHaveAttribute('aria-pressed', 'true');
+    await expect(capsules).toHaveCount(20);
+
+    // Back to the smallest vault to exercise the celebration on a known pair
+    await page.getByTestId('level-select-1').click();
+    await expect(capsules).toHaveCount(6);
+
+    const symbols = await capsules.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('data-symbol')),
+    );
+    const firstSymbol = symbols[0];
+    const twinIndex = symbols.findIndex((symbol, index) => index > 0 && symbol === firstSymbol);
+    expect(twinIndex, 'level 1 must contain the twin of the first capsule').toBeGreaterThan(0);
+
+    await capsules.first().click();
+    await capsules.nth(twinIndex).click();
+
+    // Attention effect: a localized score popup rises from the matched capsule
+    await expect(page.getByTestId('score-popup')).toBeVisible();
+    await expect(page.getByTestId('score-popup')).toHaveText(/^\+\d+$/);
+    await expect(page.locator('[data-testid="vault-capsule"][data-matched="true"]')).toHaveCount(2);
+  });
 });
 

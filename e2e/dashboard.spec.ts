@@ -12,13 +12,14 @@ test.describe('Dashboard & Navigation Suite', () => {
     await expect(page.getByText('SUPERPOWER TRAINING ARCADE')).toBeVisible();
     await expect(page.getByRole('heading', { name: /CHOOSE YOUR QUEST/i })).toBeVisible();
 
-    // 3. Verify all 6 Games in the Catalog
+    // 3. Verify all 7 Games in the Catalog (6 behavior missions + the memory vault)
     await expect(page.getByText(/Cosmic Break Quest/i)).toBeVisible();
     await expect(page.getByText(/Time Warp Explorer/i)).toBeVisible();
     await expect(page.getByText(/Star Tower Co-Op/i)).toBeVisible();
     await expect(page.getByText(/Icon Quest Island/i)).toBeVisible();
     await expect(page.getByText(/Chroma Critters Lab/i)).toBeVisible();
     await expect(page.getByText(/Echo Beats Jam/i)).toBeVisible();
+    await expect(page.getByText(/Nebula Memory Vault/i)).toBeVisible();
   });
 
   test('should toggle sound in the header and accept search input', async ({ pageWithAudio: page }) => {

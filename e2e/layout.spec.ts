@@ -146,5 +146,53 @@ test.describe('Layout & Tablet Viewport Guards', () => {
     );
     expect(overflowY, 'Number Forge Alchemist outer window must fit inside screen without browser scroll').toBeLessThanOrEqual(2);
   });
+
+  test('Nebula Memory Vault: densest capsule grid fits iPad screens with 64px touch targets', async ({ pageWithAudio: page }) => {
+    for (const vp of IPAD_VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto('/');
+      await page.waitForTimeout(300);
+
+      await expect(page.getByText(/Nebula Memory Vault/i)).toBeVisible();
+      const card = page.locator('.perspective-1000').filter({ hasText: /Nebula Memory Vault/i });
+      await card.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+      await expect(page.getByText(/Vault 1\/4/i)).toBeVisible();
+
+      const capsules = page.getByTestId('vault-capsule');
+      await expect(capsules).toHaveCount(6);
+
+      // Co-pilot Skip reaches the densest vault (5 x 4 = 20 capsules)
+      for (let step = 0; step < 3; step += 1) {
+        await page.getByRole('button', { name: /^Skip$/i }).click();
+      }
+      await expect(page.getByText(/Vault 4\/4/i)).toBeVisible();
+      await expect(capsules).toHaveCount(20);
+
+      const overflowX = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect(overflowX, `${vp.name}: Nebula Memory Vault must not scroll horizontally`).toBeLessThanOrEqual(2);
+
+      const overflowY = await page.evaluate(
+        () => document.documentElement.scrollHeight - document.documentElement.clientHeight
+      );
+      expect(overflowY, `${vp.name}: Nebula Memory Vault must not scroll vertically`).toBeLessThanOrEqual(2);
+
+      const total = await capsules.count();
+      for (let i = 0; i < total; i += 1) {
+        const box = await capsules.nth(i).boundingBox();
+        expect(box, `${vp.name}: capsule #${i} must have a valid bounding box`).not.toBeNull();
+        if (box) {
+          expect(box.x + box.width, `${vp.name}: capsule #${i} right edge must stay inside the screen`).toBeLessThanOrEqual(vp.width + 1);
+          expect(box.y + box.height, `${vp.name}: capsule #${i} bottom edge must stay inside the screen`).toBeLessThanOrEqual(vp.height + 1);
+          expect(box.width, `${vp.name}: capsule #${i} width must be a 64px touch target`).toBeGreaterThanOrEqual(64);
+          expect(box.height, `${vp.name}: capsule #${i} height must be a 64px touch target`).toBeGreaterThanOrEqual(64);
+        }
+      }
+
+      await page.getByRole('button', { name: /Return to Mission Hub/i }).click();
+      await expect(page.getByRole('heading', { name: /CHOOSE YOUR QUEST/i })).toBeVisible();
+    }
+  });
 });
 
