@@ -10,7 +10,8 @@ import { EchoBeatsGame } from './components/games/EchoBeatsGame';
 import { CosmicFuelGame } from './components/games/CosmicFuelGame';
 import { MeteorArrayGame } from './components/games/MeteorArrayGame';
 import { NumberForgeGame } from './components/games/NumberForgeGame';
-import { GameId, WorldSector } from './types';
+import { MemoryVaultGame } from './components/games/MemoryVaultGame';
+import type { GameId, WorldSector } from './types';
 
 import { GAMES_CATALOG } from './data/games';
 import { soundEngine } from './utils/audio';
@@ -85,6 +86,8 @@ export function App() {
         <MeteorArrayGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : activeGameId === 'number-forge' ? (
         <NumberForgeGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
+      ) : activeGameId === 'memory-vault' ? (
+        <MemoryVaultGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-slate-400">Module in development</p>
