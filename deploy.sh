@@ -8,7 +8,7 @@ if [ -s "${NVM_DIR}/nvm.sh" ]; then
 fi
 
 # Ensure pnpm and firebase binaries are on PATH
-export PATH="${HOME}/.nvm/versions/node/v24.19.0/bin:/usr/local/bin:${PATH}"
+export PATH="${HOME}/.nvm/versions/node/v24.22.1/bin:/usr/local/bin:${PATH}"
 
 echo "=========================================="
 echo "  SkillQuest - Production Deployment"
