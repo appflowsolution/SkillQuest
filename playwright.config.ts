@@ -1,5 +1,14 @@
 import { defineConfig } from "@playwright/test";
 
+// Load local environment variables in Node test runner
+if (process.loadEnvFile) {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // Ignore if .env is missing
+  }
+}
+
 const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 
 export default defineConfig({

@@ -7,14 +7,26 @@ import {
   Firestore 
 } from 'firebase/firestore';
 
+const getEnv = (key: string, fallback: string = ''): string => {
+  const meta = import.meta as any;
+  if (meta?.env?.[key]) {
+    return meta.env[key];
+  }
+  const proc = typeof globalThis !== 'undefined' ? (globalThis as any).process : undefined;
+  if (proc?.env?.[key]) {
+    return proc.env[key] || '';
+  }
+  return fallback;
+};
+
 export const firebaseConfig = {
-  apiKey: "AIzaSyDIVGUopRMQCZ6cZgsX5rdhjuG5jpidG5g",
-  authDomain: "other-project-b1f2e.firebaseapp.com",
-  projectId: "other-project-b1f2e",
-  storageBucket: "other-project-b1f2e.firebasestorage.app",
-  messagingSenderId: "838300773191",
-  appId: "1:838300773191:web:2ee87b79ac4959e01eba62",
-  measurementId: "G-VKWXPFPSY9"
+  apiKey: getEnv('VITE_FIREBASE_API_KEY'),
+  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN', 'other-project-b1f2e.firebaseapp.com'),
+  projectId: getEnv('VITE_FIREBASE_PROJECT_ID', 'other-project-b1f2e'),
+  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET', 'other-project-b1f2e.firebasestorage.app'),
+  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', '838300773191'),
+  appId: getEnv('VITE_FIREBASE_APP_ID', '1:838300773191:web:2ee87b79ac4959e01eba62'),
+  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID', 'G-VKWXPFPSY9')
 };
 
 // Singleton initialization
