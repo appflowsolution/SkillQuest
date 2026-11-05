@@ -401,12 +401,37 @@ export async function resetAllStats(): Promise<void> {
  */
 export function getSavedPin(): string {
   try {
-    const pin = localStorage.getItem(PIN_STORAGE_KEY);
-    if (pin && pin.trim().length > 0) return pin;
+    if (typeof localStorage !== 'undefined') {
+      const pin = localStorage.getItem(PIN_STORAGE_KEY);
+      if (pin && pin.trim().length > 0) return pin;
+    }
   } catch {
     // fallback
   }
   return DEFAULT_PIN;
+}
+
+/**
+ * Syncs PIN from remote Firestore into local cache.
+ */
+export async function syncRemotePin(): Promise<string> {
+  try {
+    const settingsDoc = doc(db, SETTINGS_COLLECTION, 'auth');
+    const snap = await getDoc(settingsDoc);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (typeof data?.pin === 'string' && data.pin.trim().length >= 4) {
+        const remotePin = data.pin.trim();
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(PIN_STORAGE_KEY, remotePin);
+        }
+        return remotePin;
+      }
+    }
+  } catch (err) {
+    console.warn('[StatsService] PIN remote sync failed, using local cache:', err);
+  }
+  return getSavedPin();
 }
 
 export function verifyPin(inputPin: string): boolean {
@@ -416,7 +441,9 @@ export function verifyPin(inputPin: string): boolean {
 export async function changePin(newPin: string): Promise<boolean> {
   if (!newPin || newPin.trim().length < 4) return false;
   try {
-    localStorage.setItem(PIN_STORAGE_KEY, newPin.trim());
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(PIN_STORAGE_KEY, newPin.trim());
+    }
     const settingsDoc = doc(db, SETTINGS_COLLECTION, 'auth');
     await setDoc(settingsDoc, {
       pin: newPin.trim(),

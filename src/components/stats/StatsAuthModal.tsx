@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShieldCheck, Delete, X, AlertCircle } from 'lucide-react';
 import { soundEngine } from '../../utils/audio';
-import { verifyPin } from '../../services/statsService';
+import { verifyPin, syncRemotePin } from '../../services/statsService';
 
 interface StatsAuthModalProps {
   isOpen: boolean;
@@ -19,6 +19,7 @@ export const StatsAuthModal = ({ isOpen, onClose, onSuccess }: StatsAuthModalPro
       setPin('');
       setError(false);
       setShake(false);
+      syncRemotePin().catch(() => {});
     }
   }, [isOpen]);
 
@@ -50,9 +51,15 @@ export const StatsAuthModal = ({ isOpen, onClose, onSuccess }: StatsAuthModalPro
     setError(false);
 
     if (nextPin.length === 4) {
-      // Validate
-      setTimeout(() => {
-        if (verifyPin(nextPin)) {
+      // Validate with local cache first, fallback to remote if local mismatch
+      setTimeout(async () => {
+        let isValid = verifyPin(nextPin);
+        if (!isValid) {
+          const remotePin = await syncRemotePin();
+          isValid = nextPin.trim() === remotePin.trim();
+        }
+
+        if (isValid) {
           soundEngine.playSuccess();
           onSuccess();
         } else {

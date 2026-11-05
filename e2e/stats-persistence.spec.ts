@@ -3,7 +3,8 @@ import {
   aggregateStatsByTimeframe, 
   calculateOverview, 
   normalizeStatsMap,
-  verifyPin 
+  verifyPin,
+  syncRemotePin
 } from '../src/services/statsService';
 import type { SessionRecord, GameUsageStat } from '../src/types/stats';
 import { GAMES_CATALOG } from '../src/data/games';
@@ -211,6 +212,14 @@ test.describe('Unit & Mathematical Boundary Suite: Stats Service Engine', () => 
     expect(verifyPin(' 1234 ')).toBe(true);
     expect(verifyPin('0000')).toBe(false);
     expect(verifyPin('')).toBe(false);
+  });
+
+  test('syncRemotePin pulls remote PIN from Firestore and updates local cache', async () => {
+    const pin = await syncRemotePin();
+    expect(pin).toBeDefined();
+    expect(typeof pin).toBe('string');
+    expect(pin.length).toBeGreaterThanOrEqual(4);
+    expect(verifyPin(pin)).toBe(true);
   });
 });
 

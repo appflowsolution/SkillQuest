@@ -17,7 +17,7 @@ import type { GameId, WorldSector } from './types';
 
 import { GAMES_CATALOG } from './data/games';
 import { soundEngine } from './utils/audio';
-import { recordHeartbeat, recordSessionExit } from './services/statsService';
+import { recordHeartbeat, recordSessionExit, syncRemotePin } from './services/statsService';
 
 export function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'game' | 'stats'>('dashboard');
@@ -25,6 +25,11 @@ export function App() {
   const [activeSector, setActiveSector] = useState<WorldSector>('behavior');
   const [isMuted, setIsMuted] = useState(false);
   const [rbtMode, setRbtMode] = useState(true);
+
+  // Sync PIN from cloud on initial load
+  useEffect(() => {
+    syncRemotePin().catch(() => {});
+  }, []);
 
   // Stats Auth & View state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
