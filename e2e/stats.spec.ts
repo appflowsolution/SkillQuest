@@ -45,10 +45,10 @@ test.describe('Clinical & Game Usage Statistics Suite', () => {
 
     // Verify Vertical Axis Metric Switcher
     await expect(page.getByRole('button', { name: 'No. of Sessions' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Play Time (Minutes)' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Play Time' })).toBeVisible();
 
     // Test switching metric to Play Time
-    await page.getByRole('button', { name: 'Play Time (Minutes)' }).click();
+    await page.getByRole('button', { name: 'Play Time' }).click();
     await page.getByRole('button', { name: 'No. of Sessions' }).click();
 
     // Verify Sector Tabs

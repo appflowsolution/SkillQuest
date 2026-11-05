@@ -105,6 +105,21 @@ export async function getGameStats(): Promise<Record<string, GameUsageStat>> {
 }
 
 /**
+ * Normalizes timestamps across numbers, Firestore Timestamps, Dates and ISO strings.
+ */
+export function toEpochMs(val: any): number {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.seconds === 'number') {
+    return val.seconds * 1000 + (val.nanoseconds ? Math.round(val.nanoseconds / 1e6) : 0);
+  }
+  if (val instanceof Date) return val.getTime();
+  const parsed = Date.parse(val);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
  * Fetch all historical session logs with local fallback.
  */
 export async function getSessionHistory(): Promise<SessionRecord[]> {
@@ -118,16 +133,10 @@ export async function getSessionHistory(): Promise<SessionRecord[]> {
       remote.push(d.data() as SessionRecord);
     });
 
-    // If remote has 0 sessions (e.g. after reset), do not resurrect from local cache
-    if (snapshot.empty) {
-      setLocalSessionsCache([]);
-      return [];
-    }
-
     const map = new Map<string, SessionRecord>();
     for (const s of local) map.set(s.id, s);
     for (const s of remote) map.set(s.id, s);
-    const merged = Array.from(map.values()).sort((a, b) => b.startedAt - a.startedAt);
+    const merged = Array.from(map.values()).sort((a, b) => toEpochMs(b.startedAt) - toEpochMs(a.startedAt));
     setLocalSessionsCache(merged);
     return merged;
   } catch (err) {
@@ -295,7 +304,11 @@ export function aggregateStatsByTimeframe(
     result[game.id] = { sessionsCount: 0, durationSeconds: 0 };
   }
 
-  const filtered = sessions.filter(s => s.startedAt >= cutoffTimestamp);
+  const filtered = sessions.filter(s => {
+    const started = toEpochMs(s.startedAt);
+    return cutoffTimestamp === 0 || started >= cutoffTimestamp;
+  });
+
   for (const s of filtered) {
     if (result[s.gameId]) {
       result[s.gameId].sessionsCount += 1;
@@ -303,26 +316,17 @@ export function aggregateStatsByTimeframe(
     }
   }
 
-  // If timeframe is total, blend with allTimeStats to account for aggregated counters
-  if (timeframe === 'total') {
-    for (const game of GAMES_CATALOG) {
-      const allTime = allTimeStats[game.id];
-      if (allTime) {
-        result[game.id].sessionsCount = Math.max(result[game.id].sessionsCount, allTime.timesPlayed || 0);
-        result[game.id].durationSeconds = Math.max(result[game.id].durationSeconds, allTime.totalDurationSeconds || 0);
-      }
-    }
-  } else {
-    // For daily, weekly, and monthly: if individual session documents are absent or empty
-    // but allTimeStats has activity within this timeframe window, gracefully fall back
-    for (const game of GAMES_CATALOG) {
-      const allTime = allTimeStats[game.id];
-      if (allTime && allTime.lastPlayedAt && allTime.lastPlayedAt >= cutoffTimestamp) {
-        if (result[game.id].sessionsCount === 0 && (allTime.timesPlayed || 0) > 0) {
-          result[game.id].sessionsCount = allTime.timesPlayed || 0;
-          result[game.id].durationSeconds = allTime.totalDurationSeconds || 0;
-        }
-      }
+  // Blend with allTimeStats to reconcile aggregate counters within this timeframe window
+  for (const game of GAMES_CATALOG) {
+    const allTime = allTimeStats[game.id];
+    if (!allTime) continue;
+
+    const lastPlayed = Math.max(toEpochMs(allTime.lastPlayedAt), toEpochMs(allTime.updatedAt));
+    const hasActivityInCutoff = cutoffTimestamp === 0 || (lastPlayed > 0 && lastPlayed >= cutoffTimestamp);
+
+    if (hasActivityInCutoff) {
+      result[game.id].sessionsCount = Math.max(result[game.id].sessionsCount, allTime.timesPlayed || 0);
+      result[game.id].durationSeconds = Math.max(result[game.id].durationSeconds, allTime.totalDurationSeconds || 0);
     }
   }
 

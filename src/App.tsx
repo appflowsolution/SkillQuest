@@ -100,17 +100,23 @@ export function App() {
     setCurrentView('game');
   };
 
-  const handleBackToDashboard = () => {
-    if (currentView === 'game' && activeGameId && sessionStartTimeRef.current) {
+  const flushActiveGameSession = () => {
+    const currentGameId = activeGameIdRef.current || activeGameId;
+    if (currentGameId && sessionStartTimeRef.current) {
       const now = Date.now();
       const unflushedSeconds = (now - (lastFlushTimeRef.current || sessionStartTimeRef.current)) / 1000;
       const totalSessionSeconds = (now - sessionStartTimeRef.current) / 1000;
-      recordSessionExit(activeGameId, unflushedSeconds, totalSessionSeconds);
+      recordSessionExit(currentGameId, unflushedSeconds, totalSessionSeconds);
       sessionStartTimeRef.current = null;
       lastFlushTimeRef.current = null;
+      activeGameIdRef.current = null;
+      setActiveGameId(null);
     }
+  };
+
+  const handleBackToDashboard = () => {
+    flushActiveGameSession();
     setCurrentView('dashboard');
-    setActiveGameId(null);
   };
 
   const handleToggleMute = () => {
@@ -124,6 +130,9 @@ export function App() {
   };
 
   const handleOpenStats = () => {
+    if (currentView === 'game') {
+      flushActiveGameSession();
+    }
     if (isStatsUnlocked) {
       setCurrentView('stats');
     } else {

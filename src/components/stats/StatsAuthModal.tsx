@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, Delete, X, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Delete, X, AlertCircle } from 'lucide-react';
 import { soundEngine } from '../../utils/audio';
 import { verifyPin } from '../../services/statsService';
 
@@ -163,14 +163,6 @@ export const StatsAuthModal = ({ isOpen, onClose, onSuccess }: StatsAuthModalPro
           >
             <Delete className="w-5 h-5" />
           </button>
-        </div>
-
-        {/* Helper Footer */}
-        <div className="text-center pt-2 border-t border-white/10">
-          <p className="text-[11px] text-slate-400">
-            <Lock className="w-3 h-3 inline mr-1 text-[#ffb703]" />
-            Default PIN: <span className="font-mono text-white font-bold">1234</span>
-          </p>
         </div>
       </div>
     </div>

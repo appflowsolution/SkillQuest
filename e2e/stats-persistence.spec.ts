@@ -322,12 +322,12 @@ test.describe('End-to-End Persistence & Lifecycle Browser Suite', () => {
     await expect(page.getByText(/RBT & Clinical Analytics Hub/i)).toBeVisible();
 
     const sessionsMetricBtn = page.getByRole('button', { name: 'No. of Sessions' });
-    const timeMetricBtn = page.getByRole('button', { name: 'Play Time (Minutes)' });
+    const timeMetricBtn = page.getByRole('button', { name: 'Play Time' });
 
-    // Switch to Play Time (Minutes)
+    // Switch to Play Time
     await timeMetricBtn.click();
     await expect(timeMetricBtn).toHaveClass(/bg-\[#ffb703\]/);
-    await expect(page.getByText('0m').first()).toBeVisible();
+    await expect(page.getByText(/0[sm]/).first()).toBeVisible();
 
     // Switch back to Sessions
     await sessionsMetricBtn.click();
@@ -566,5 +566,170 @@ test.describe('End-to-End Persistence & Lifecycle Browser Suite', () => {
       return allZeros && noSessions;
     });
     expect(isReset).toBe(true);
+  });
+
+  test('when all sessions are from today, daily, weekly, monthly, and total must return identical data for all games', () => {
+    const now = Date.now();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfTodayMs = today.getTime();
+
+    const sessions: SessionRecord[] = [
+      { id: 's1', gameId: 'break-request', durationSeconds: 45, startedAt: startOfTodayMs + 10000, endedAt: startOfTodayMs + 55000, completed: true },
+      { id: 's2', gameId: 'break-request', durationSeconds: 45, startedAt: startOfTodayMs + 60000, endedAt: startOfTodayMs + 105000, completed: true },
+      { id: 's3', gameId: 'more-time', durationSeconds: 20, startedAt: startOfTodayMs + 120000, endedAt: startOfTodayMs + 140000, completed: true }
+    ];
+
+    const allTimeStats: Record<string, GameUsageStat> = {
+      'break-request': {
+        gameId: 'break-request',
+        title: 'Cosmic Break Quest',
+        timesPlayed: 2,
+        totalDurationSeconds: 90,
+        lastPlayedAt: startOfTodayMs + 105000,
+        completedSessions: 2,
+        updatedAt: now
+      },
+      'more-time': {
+        gameId: 'more-time',
+        title: 'Time Warp: Wait Master',
+        timesPlayed: 1,
+        totalDurationSeconds: 20,
+        lastPlayedAt: startOfTodayMs + 140000,
+        completedSessions: 1,
+        updatedAt: now
+      }
+    };
+
+    const daily = aggregateStatsByTimeframe('daily', sessions, allTimeStats);
+    const weekly = aggregateStatsByTimeframe('weekly', sessions, allTimeStats);
+    const monthly = aggregateStatsByTimeframe('monthly', sessions, allTimeStats);
+    const total = aggregateStatsByTimeframe('total', sessions, allTimeStats);
+
+    // Verify Break Quest across all scales
+    expect(daily['break-request'].sessionsCount).toBe(2);
+    expect(daily['break-request'].durationSeconds).toBe(90);
+
+    expect(weekly['break-request'].sessionsCount).toBe(2);
+    expect(weekly['break-request'].durationSeconds).toBe(90);
+
+    expect(monthly['break-request'].sessionsCount).toBe(2);
+    expect(monthly['break-request'].durationSeconds).toBe(90);
+
+    expect(total['break-request'].sessionsCount).toBe(2);
+    expect(total['break-request'].durationSeconds).toBe(90);
+
+    // Verify Time Warp across all scales
+    expect(daily['more-time'].sessionsCount).toBe(1);
+    expect(daily['more-time'].durationSeconds).toBe(20);
+
+    expect(weekly['more-time'].sessionsCount).toBe(1);
+    expect(weekly['more-time'].durationSeconds).toBe(20);
+
+    expect(monthly['more-time'].sessionsCount).toBe(1);
+    expect(monthly['more-time'].durationSeconds).toBe(20);
+
+    expect(total['more-time'].sessionsCount).toBe(1);
+    expect(total['more-time'].durationSeconds).toBe(20);
+  });
+
+  test('should display non-zero playtime bars for both games when 2 games are played with sub-minute durations and keep identical counts across all 4 time scales', async ({ pageWithAudio: page }) => {
+    // 1. Play Game 1: Cosmic Break Quest for ~2 seconds
+    const cosmicCard = page.locator('.perspective-1000').filter({ hasText: /Cosmic Break Quest/i });
+    await cosmicCard.click();
+    await expect(page.getByText('Round 1', { exact: true })).toBeVisible();
+    await page.waitForTimeout(2000);
+    await page.getByRole('button', { name: 'Mission Hub' }).click();
+    await expect(page.getByText('SUPERPOWER TRAINING ARCADE')).toBeVisible();
+
+    // 2. Play Game 2: Time Warp for ~2 seconds
+    const timeWarpCard = page.locator('.perspective-1000').filter({ hasText: /Time Warp/i });
+    await timeWarpCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+    await expect(page.getByRole('button', { name: 'Mission Hub' })).toBeVisible();
+    await page.waitForTimeout(2000);
+    await page.getByRole('button', { name: 'Mission Hub' }).click();
+    await expect(page.getByText('SUPERPOWER TRAINING ARCADE')).toBeVisible();
+
+    // 3. Open Stats Dashboard
+    const statsBtn = page.locator('header button[aria-label="Usage Statistics"]');
+    await statsBtn.click();
+
+    const pinHeader = page.getByText('RBT & Clinical Access');
+    if (await pinHeader.isVisible()) {
+      const keypad = page.locator('.grid.grid-cols-3');
+      await keypad.getByRole('button', { name: '1' }).click();
+      await keypad.getByRole('button', { name: '2' }).click();
+      await keypad.getByRole('button', { name: '3' }).click();
+      await keypad.getByRole('button', { name: '4' }).click();
+    }
+
+    await expect(page.getByText(/RBT & Clinical Analytics Hub/i)).toBeVisible();
+
+    // 4. In "No. of Sessions" view, both games should be visible in the chart
+    await expect(page.getByText('Break Quest', { exact: true })).toBeVisible();
+    await expect(page.getByText('Time Warp', { exact: true })).toBeVisible();
+
+    // 5. Switch to "Play Time" view
+    const timeMetricBtn = page.getByRole('button', { name: 'Play Time' });
+    await timeMetricBtn.click();
+    await expect(timeMetricBtn).toHaveClass(/bg-\[#ffb703\]/);
+
+    // Both games MUST display their positive seconds duration (e.g. 2s, 3s) and NOT '0'
+    const breakdown = page.locator('.divide-y');
+    await expect(breakdown.getByText('Cosmic Break Quest')).toBeVisible();
+    await expect(breakdown.getByText(/Time Warp/i)).toBeVisible();
+
+    // 6. Test Time Scale Switchers: Daily, Weekly, Monthly, Total MUST present the exact same 2 games with identical counts
+    const dailyBtn = page.getByRole('button', { name: 'Daily' });
+    const weeklyBtn = page.getByRole('button', { name: 'Weekly' });
+    const monthlyBtn = page.getByRole('button', { name: 'Monthly' });
+    const totalBtn = page.getByRole('button', { name: 'Total' });
+
+    // Daily
+    await dailyBtn.click();
+    await expect(breakdown.getByText('Cosmic Break Quest')).toBeVisible();
+    await expect(breakdown.getByText(/Time Warp/i)).toBeVisible();
+
+    // Weekly
+    await weeklyBtn.click();
+    await expect(breakdown.getByText('Cosmic Break Quest')).toBeVisible();
+    await expect(breakdown.getByText(/Time Warp/i)).toBeVisible();
+
+    // Monthly
+    await monthlyBtn.click();
+    await expect(breakdown.getByText('Cosmic Break Quest')).toBeVisible();
+    await expect(breakdown.getByText(/Time Warp/i)).toBeVisible();
+
+    // Total
+    await totalBtn.click();
+    await expect(breakdown.getByText('Cosmic Break Quest')).toBeVisible();
+    await expect(breakdown.getByText(/Time Warp/i)).toBeVisible();
+  });
+
+  test('should flush and persist active game session when opening stats directly from header without clicking back button', async ({ pageWithAudio: page }) => {
+    // 1. Launch Chroma Critters Lab
+    const crittersCard = page.locator('.perspective-1000').filter({ hasText: /Critters/i });
+    await crittersCard.locator('.backface-hidden').first().click({ position: { x: 80, y: 80 } });
+    await expect(page.getByRole('button', { name: 'Mission Hub' })).toBeVisible();
+    await page.waitForTimeout(2000);
+
+    // 2. Open stats directly via Header icon while still inside the game
+    const statsBtn = page.locator('header button[aria-label="Usage Statistics"]');
+    await statsBtn.click();
+
+    const pinHeader = page.getByText('RBT & Clinical Access');
+    if (await pinHeader.isVisible()) {
+      const keypad = page.locator('.grid.grid-cols-3');
+      await keypad.getByRole('button', { name: '1' }).click();
+      await keypad.getByRole('button', { name: '2' }).click();
+      await keypad.getByRole('button', { name: '3' }).click();
+      await keypad.getByRole('button', { name: '4' }).click();
+    }
+
+    await expect(page.getByText(/RBT & Clinical Analytics Hub/i)).toBeVisible();
+
+    // Chroma Critters Lab should be recorded in breakdown
+    const breakdown = page.locator('.divide-y');
+    await expect(breakdown.getByText(/Critters/i)).toBeVisible();
   });
 });

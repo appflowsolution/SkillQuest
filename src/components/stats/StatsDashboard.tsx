@@ -151,29 +151,43 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
   }, [chartData]);
 
   // Compute Y-Axis max & ticks
-  const { maxVal, yTicks } = useMemo(() => {
+  const { maxVal, yTicks, timeUnit } = useMemo(() => {
     if (metric === 'sessions') {
       const max = Math.max(...chartData.map(d => d.sessionsCount), 0);
       const roundedMax = Math.max(4, Math.ceil(max / 4) * 4);
       const step = roundedMax / 4;
       return {
         maxVal: roundedMax,
-        yTicks: [roundedMax, step * 3, step * 2, step, 0]
+        yTicks: [roundedMax, step * 3, step * 2, step, 0],
+        timeUnit: ''
       };
     } else {
       const maxSec = Math.max(...chartData.map(d => d.durationSeconds), 0);
-      const maxMin = Math.max(1, Math.ceil(maxSec / 60));
-      const roundedMaxMin = Math.max(4, Math.ceil(maxMin / 4) * 4);
-      const step = roundedMaxMin / 4;
-      return {
-        maxVal: roundedMaxMin,
-        yTicks: [roundedMaxMin, step * 3, step * 2, step, 0]
-      };
+      if (maxSec <= 120) {
+        // High-resolution seconds scale for fine-grained practice sessions
+        const roundedMaxSec = Math.max(20, Math.ceil(Math.max(maxSec, 20) / 20) * 20);
+        const step = roundedMaxSec / 4;
+        return {
+          maxVal: roundedMaxSec,
+          yTicks: [roundedMaxSec, step * 3, step * 2, step, 0],
+          timeUnit: 's'
+        };
+      } else {
+        // Minutes scale for longer aggregate playtimes
+        const maxMin = Math.ceil(maxSec / 60);
+        const roundedMaxMin = Math.max(4, Math.ceil(maxMin / 4) * 4);
+        const step = roundedMaxMin / 4;
+        return {
+          maxVal: roundedMaxMin * 60, // in seconds for proportional calculation
+          yTicks: [roundedMaxMin, step * 3, step * 2, step, 0],
+          timeUnit: 'm'
+        };
+      }
     }
   }, [chartData, metric]);
 
   const formatDuration = (totalSeconds: number) => {
-    if (!totalSeconds || totalSeconds < 1) return '0 min';
+    if (!totalSeconds || totalSeconds < 1) return '0s';
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = Math.floor(totalSeconds % 60);
@@ -416,7 +430,7 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Play Time (Minutes)
+                Play Time
               </button>
             </div>
           </div>
@@ -510,7 +524,7 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
             <div className="w-12 md:w-16 h-full flex flex-col justify-between items-end pr-3 pb-8 shrink-0 text-slate-400 text-[10px] md:text-xs font-mono font-bold select-none border-r border-white/10">
               {yTicks.map((tick, i) => (
                 <span key={i} className="-translate-y-2">
-                  {metric === 'sessions' ? tick : `${tick}m`}
+                  {metric === 'sessions' ? tick : `${tick}${timeUnit}`}
                 </span>
               ))}
             </div>
@@ -527,13 +541,21 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
               {chartData.map((item) => {
                 const numericValue = metric === 'sessions' 
                   ? item.sessionsCount 
-                  : item.durationMinutes;
+                  : item.durationSeconds;
 
                 const heightPercent = maxVal > 0 
                   ? Math.min(100, Math.max(0, (numericValue / maxVal) * 100))
                   : 0;
 
                 const isHovered = activeHoverGame?.gameId === item.gameId;
+
+                const barTopLabel = (() => {
+                  if (numericValue <= 0) return '0';
+                  if (metric === 'sessions') return `${numericValue}`;
+                  if (numericValue < 60) return `${numericValue}s`;
+                  const mins = numericValue / 60;
+                  return mins % 1 === 0 ? `${mins}m` : `${mins.toFixed(1)}m`;
+                })();
 
                 return (
                   <div 
@@ -554,7 +576,7 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
                           : 'text-slate-600'
                       }`}
                     >
-                      {numericValue > 0 ? (metric === 'sessions' ? numericValue : `${numericValue}m`) : '0'}
+                      {barTopLabel}
                     </div>
 
                     {/* Animated Bar Column */}
@@ -572,7 +594,7 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
                                 : 'bg-gradient-to-t from-[#009b84] to-[#00d2b4] shadow-md'
                         }`}
                         style={{ 
-                          height: numericValue > 0 ? `${Math.max(6, heightPercent)}%` : '6px' 
+                          height: numericValue > 0 ? `${Math.max(8, heightPercent)}%` : '6px' 
                         }}
                       >
                         {/* Shimmer light effect on top of bar */}
