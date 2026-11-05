@@ -62,6 +62,20 @@ export function App() {
     return () => clearInterval(interval);
   }, [currentView, activeGameId]);
 
+  const flushActiveGameSession = () => {
+    const currentGameId = activeGameIdRef.current || activeGameId;
+    if (currentGameId && sessionStartTimeRef.current) {
+      const now = Date.now();
+      const unflushedSeconds = (now - (lastFlushTimeRef.current || sessionStartTimeRef.current)) / 1000;
+      const totalSessionSeconds = (now - sessionStartTimeRef.current) / 1000;
+      recordSessionExit(currentGameId, unflushedSeconds, totalSessionSeconds);
+      sessionStartTimeRef.current = null;
+      lastFlushTimeRef.current = null;
+      activeGameIdRef.current = null;
+      setActiveGameId(null);
+    }
+  };
+
   // Visibility change & beforeunload handler (e.g. tablet app minimized or tab closed)
   useEffect(() => {
     const handleFlushOnLeave = () => {
@@ -81,14 +95,18 @@ export function App() {
       }
     };
 
+    const handleBeforeUnload = () => {
+      flushActiveGameSession();
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleFlushOnLeave);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleFlushOnLeave);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 
@@ -103,20 +121,6 @@ export function App() {
     }
     setActiveGameId(gameId);
     setCurrentView('game');
-  };
-
-  const flushActiveGameSession = () => {
-    const currentGameId = activeGameIdRef.current || activeGameId;
-    if (currentGameId && sessionStartTimeRef.current) {
-      const now = Date.now();
-      const unflushedSeconds = (now - (lastFlushTimeRef.current || sessionStartTimeRef.current)) / 1000;
-      const totalSessionSeconds = (now - sessionStartTimeRef.current) / 1000;
-      recordSessionExit(currentGameId, unflushedSeconds, totalSessionSeconds);
-      sessionStartTimeRef.current = null;
-      lastFlushTimeRef.current = null;
-      activeGameIdRef.current = null;
-      setActiveGameId(null);
-    }
   };
 
   const handleBackToDashboard = () => {

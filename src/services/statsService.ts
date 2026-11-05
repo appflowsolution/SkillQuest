@@ -58,12 +58,30 @@ function setLocalSessionsCache(sessions: SessionRecord[]) {
 }
 
 /**
- * Ensures all games in the catalog exist in the stats map with default 0 counters.
+ * Ensures all games in the catalog exist in the stats map with default 0 counters,
+ * and heals missing timesPlayed counters for games that have accumulated duration.
  */
 export function normalizeStatsMap(incoming: Record<string, GameUsageStat>): Record<string, GameUsageStat> {
-  const result: Record<string, GameUsageStat> = { ...incoming };
+  const result: Record<string, GameUsageStat> = {};
   for (const game of GAMES_CATALOG) {
-    if (!result[game.id]) {
+    const existing = incoming[game.id];
+    if (existing) {
+      const duration = Math.max(0, existing.totalDurationSeconds || 0);
+      const times = Math.max(
+        existing.timesPlayed || 0,
+        duration > 0 ? 1 : 0
+      );
+      result[game.id] = {
+        ...existing,
+        gameId: game.id,
+        title: existing.title || game.title,
+        timesPlayed: times,
+        totalDurationSeconds: duration,
+        completedSessions: existing.completedSessions || 0,
+        lastPlayedAt: toEpochMs(existing.lastPlayedAt) || 0,
+        updatedAt: toEpochMs(existing.updatedAt) || Date.now()
+      };
+    } else {
       result[game.id] = {
         gameId: game.id,
         title: game.title,
@@ -179,6 +197,7 @@ export async function recordHeartbeat(gameId: GameId, elapsedSeconds: number) {
     await setDoc(docRef, {
       gameId,
       title,
+      timesPlayed: Math.max(current.timesPlayed || 1, 1),
       totalDurationSeconds: increment(roundedSeconds),
       lastPlayedAt: now,
       updatedAt: now
@@ -325,8 +344,17 @@ export function aggregateStatsByTimeframe(
     const hasActivityInCutoff = cutoffTimestamp === 0 || (lastPlayed > 0 && lastPlayed >= cutoffTimestamp);
 
     if (hasActivityInCutoff) {
-      result[game.id].sessionsCount = Math.max(result[game.id].sessionsCount, allTime.timesPlayed || 0);
+      const allTimeTimes = Math.max(
+        allTime.timesPlayed || 0,
+        (allTime.totalDurationSeconds || 0) > 0 ? 1 : 0
+      );
+      result[game.id].sessionsCount = Math.max(result[game.id].sessionsCount, allTimeTimes);
       result[game.id].durationSeconds = Math.max(result[game.id].durationSeconds, allTime.totalDurationSeconds || 0);
+    }
+
+    // Mathematical integrity invariant: if duration > 0, sessionsCount must be >= 1
+    if (result[game.id].durationSeconds > 0 && result[game.id].sessionsCount === 0) {
+      result[game.id].sessionsCount = 1;
     }
   }
 
@@ -399,8 +427,13 @@ export async function resetAllStats(): Promise<void> {
 /**
  * PIN Management
  */
+let memoryPinCache: string | null = null;
+
 export function getSavedPin(): string {
   try {
+    if (memoryPinCache) {
+      return memoryPinCache;
+    }
     if (typeof localStorage !== 'undefined') {
       const pin = localStorage.getItem(PIN_STORAGE_KEY);
       if (pin && pin.trim().length > 0) return pin;
@@ -416,12 +449,17 @@ export function getSavedPin(): string {
  */
 export async function syncRemotePin(): Promise<string> {
   try {
+    // In automated E2E browser tests, isolate local cache from remote production Firestore PIN
+    if (typeof window !== 'undefined' && (window as unknown as { __SKILLQUEST_IS_E2E__?: boolean }).__SKILLQUEST_IS_E2E__) {
+      return getSavedPin();
+    }
     const settingsDoc = doc(db, SETTINGS_COLLECTION, 'auth');
     const snap = await getDoc(settingsDoc);
     if (snap.exists()) {
       const data = snap.data();
       if (typeof data?.pin === 'string' && data.pin.trim().length >= 4) {
         const remotePin = data.pin.trim();
+        memoryPinCache = remotePin;
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem(PIN_STORAGE_KEY, remotePin);
         }
@@ -441,12 +479,14 @@ export function verifyPin(inputPin: string): boolean {
 export async function changePin(newPin: string): Promise<boolean> {
   if (!newPin || newPin.trim().length < 4) return false;
   try {
+    const trimmed = newPin.trim();
+    memoryPinCache = trimmed;
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(PIN_STORAGE_KEY, newPin.trim());
+      localStorage.setItem(PIN_STORAGE_KEY, trimmed);
     }
     const settingsDoc = doc(db, SETTINGS_COLLECTION, 'auth');
     await setDoc(settingsDoc, {
-      pin: newPin.trim(),
+      pin: trimmed,
       updatedAt: Date.now()
     }, { merge: true });
     return true;

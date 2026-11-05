@@ -92,6 +92,7 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
   // Compute chart items
   const chartData: GameChartData[] = useMemo(() => {
     const totalTimeframeDuration = Object.values(timeframeAggregates).reduce((sum, item) => sum + item.durationSeconds, 0);
+    const totalTimeframeSessions = Object.values(timeframeAggregates).reduce((sum, item) => sum + item.sessionsCount, 0);
 
     return GAMES_CATALOG
       .filter(game => {
@@ -101,9 +102,11 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
       .map(game => {
         const agg = timeframeAggregates[game.id] || { sessionsCount: 0, durationSeconds: 0 };
         const durationMinutes = Math.round(agg.durationSeconds / 60);
-        const percentage = totalTimeframeDuration > 0 
-          ? Math.min(100, Math.round((agg.durationSeconds / totalTimeframeDuration) * 100))
-          : 0;
+
+        // Share percentage reflects the active inspection metric (sessions share vs duration share)
+        const percentage = metric === 'sessions'
+          ? (totalTimeframeSessions > 0 ? Math.min(100, Math.round((agg.sessionsCount / totalTimeframeSessions) * 100)) : 0)
+          : (totalTimeframeDuration > 0 ? Math.min(100, Math.round((agg.durationSeconds / totalTimeframeDuration) * 100)) : 0);
 
         return {
           gameId: game.id,
@@ -118,7 +121,7 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
           percentage
         };
       });
-  }, [timeframeAggregates, sectorFilter]);
+  }, [timeframeAggregates, sectorFilter, metric]);
 
   // Overview KPIs calculated dynamically from timeframe aggregates
   const overview = useMemo(() => {

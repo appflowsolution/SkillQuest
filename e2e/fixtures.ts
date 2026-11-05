@@ -6,6 +6,7 @@ import { test as base, Page } from '@playwright/test';
 export async function stubAudio(page: Page): Promise<void> {
   await page.addInitScript(() => {
     if (typeof window !== 'undefined') {
+      (window as any).__SKILLQUEST_IS_E2E__ = true;
       const origAudio = window.Audio;
       // Mock HTMLAudioElement play
       window.Audio = class extends origAudio {
