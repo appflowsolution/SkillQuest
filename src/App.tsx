@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
+import { StatsDashboard } from './components/stats/StatsDashboard';
+import { StatsAuthModal } from './components/stats/StatsAuthModal';
 import { BreakRequestGame } from './components/games/BreakRequestGame';
 import { TimeWarpGame } from './components/games/TimeWarpGame';
 import { ChromaCrittersGame } from './components/games/ChromaCrittersGame';
@@ -15,15 +17,79 @@ import type { GameId, WorldSector } from './types';
 
 import { GAMES_CATALOG } from './data/games';
 import { soundEngine } from './utils/audio';
+import { recordHeartbeat, recordSessionExit } from './services/statsService';
 
 export function App() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'game'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'game' | 'stats'>('dashboard');
   const [activeGameId, setActiveGameId] = useState<GameId | null>(null);
   const [activeSector, setActiveSector] = useState<WorldSector>('behavior');
   const [isMuted, setIsMuted] = useState(false);
   const [rbtMode, setRbtMode] = useState(true);
 
+  // Stats Auth & View state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isStatsUnlocked, setIsStatsUnlocked] = useState(false);
+
+  // Session & Heartbeat tracking refs
+  const activeGameIdRef = useRef<GameId | null>(null);
+  const sessionStartTimeRef = useRef<number | null>(null);
+  const lastFlushTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    activeGameIdRef.current = activeGameId;
+  }, [activeGameId]);
+
+  // Periodic heartbeat timer (every 60s)
+  useEffect(() => {
+    if (currentView !== 'game' || !activeGameId) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (lastFlushTimeRef.current && activeGameIdRef.current) {
+        const deltaSeconds = (now - lastFlushTimeRef.current) / 1000;
+        if (deltaSeconds >= 5) {
+          recordHeartbeat(activeGameIdRef.current, deltaSeconds);
+          lastFlushTimeRef.current = now;
+        }
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [currentView, activeGameId]);
+
+  // Visibility change & beforeunload handler (e.g. tablet app minimized or tab closed)
+  useEffect(() => {
+    const handleFlushOnLeave = () => {
+      if (activeGameIdRef.current && lastFlushTimeRef.current) {
+        const now = Date.now();
+        const deltaSeconds = (now - lastFlushTimeRef.current) / 1000;
+        if (deltaSeconds >= 2) {
+          recordHeartbeat(activeGameIdRef.current, deltaSeconds);
+          lastFlushTimeRef.current = now;
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleFlushOnLeave();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleFlushOnLeave);
+
+    return () => {
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleFlushOnLeave);
+    };
+  }, []);
+
   const handleSelectGame = (gameId: GameId) => {
+    const now = Date.now();
+    sessionStartTimeRef.current = now;
+    lastFlushTimeRef.current = now;
+
     const game = GAMES_CATALOG.find(g => g.id === gameId);
     if (game?.sector) {
       setActiveSector(game.sector);
@@ -33,6 +99,14 @@ export function App() {
   };
 
   const handleBackToDashboard = () => {
+    if (currentView === 'game' && activeGameId && sessionStartTimeRef.current) {
+      const now = Date.now();
+      const unflushedSeconds = (now - (lastFlushTimeRef.current || sessionStartTimeRef.current)) / 1000;
+      const totalSessionSeconds = (now - sessionStartTimeRef.current) / 1000;
+      recordSessionExit(activeGameId, unflushedSeconds, totalSessionSeconds);
+      sessionStartTimeRef.current = null;
+      lastFlushTimeRef.current = null;
+    }
     setCurrentView('dashboard');
     setActiveGameId(null);
   };
@@ -47,6 +121,20 @@ export function App() {
     setRbtMode(prev => !prev);
   };
 
+  const handleOpenStats = () => {
+    if (isStatsUnlocked) {
+      setCurrentView('stats');
+    } else {
+      setIsAuthModalOpen(true);
+    }
+  };
+
+  const handleAuthSuccess = () => {
+    setIsAuthModalOpen(false);
+    setIsStatsUnlocked(true);
+    setCurrentView('stats');
+  };
+
   const activeGame = GAMES_CATALOG.find(g => g.id === activeGameId);
 
   return (
@@ -59,6 +147,7 @@ export function App() {
         onToggleMute={handleToggleMute}
         rbtMode={rbtMode}
         onToggleRbtMode={handleToggleRbtMode}
+        onOpenStats={handleOpenStats}
       />
 
       {currentView === 'dashboard' ? (
@@ -68,6 +157,8 @@ export function App() {
           activeSector={activeSector}
           onSectorChange={setActiveSector}
         />
+      ) : currentView === 'stats' ? (
+        <StatsDashboard onBack={handleBackToDashboard} />
       ) : activeGameId === 'break-request' ? (
         <BreakRequestGame rbtMode={rbtMode} onExit={handleBackToDashboard} />
       ) : activeGameId === 'more-time' ? (
@@ -93,6 +184,13 @@ export function App() {
           <p className="text-slate-400">Module in development</p>
         </div>
       )}
+
+      {/* RBT / Clinical PIN Auth Modal */}
+      <StatsAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }

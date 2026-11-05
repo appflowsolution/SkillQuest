@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Volume2, VolumeX, Search, Gamepad2, ArrowLeft, Zap } from 'lucide-react';
+import { Volume2, VolumeX, Search, Gamepad2, ArrowLeft, Zap, BarChart3 } from 'lucide-react';
 import { soundEngine } from '../utils/audio';
 
 interface HeaderProps {
-  currentView: 'dashboard' | 'game';
+  currentView: 'dashboard' | 'game' | 'stats';
   activeGameTitle?: string;
   onBackToDashboard: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   rbtMode: boolean;
   onToggleRbtMode: () => void;
+  onOpenStats?: () => void;
 }
 
 export const Header = ({
@@ -18,6 +19,7 @@ export const Header = ({
   onBackToDashboard,
   isMuted,
   onToggleMute,
+  onOpenStats,
 }: HeaderProps) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -25,7 +27,7 @@ export const Header = ({
     <header className="h-16 md:h-18 bg-[#00d2b4] border-b-4 border-[#00b59b] px-4 md:px-8 flex items-center justify-between shrink-0 shadow-md z-30 select-none">
       {/* Left: Logo or Back Button */}
       <div className="flex items-center gap-4">
-        {currentView === 'game' ? (
+        {currentView === 'game' || currentView === 'stats' ? (
           <button
             onClick={() => {
               soundEngine.playTap();
@@ -56,6 +58,13 @@ export const Header = ({
           <div className="hidden lg:flex items-center gap-2 pl-3 border-l-2 border-white/40 text-white">
             <Gamepad2 className="w-5 h-5" />
             <span className="text-base font-black tracking-tight drop-shadow">{activeGameTitle}</span>
+          </div>
+        )}
+
+        {currentView === 'stats' && (
+          <div className="hidden sm:flex items-center gap-2 pl-3 border-l-2 border-white/40 text-white">
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-base font-black tracking-tight drop-shadow">Clinical Analytics</span>
           </div>
         )}
       </div>
@@ -97,6 +106,21 @@ export const Header = ({
             <Volume2 className="w-5 h-5 text-[#00a890]" />
           )}
         </button>
+
+        {/* Clinical / Usage Stats Button */}
+        {onOpenStats && currentView !== 'stats' && (
+          <button
+            onClick={() => {
+              soundEngine.playTap();
+              onOpenStats();
+            }}
+            className="w-10 h-10 rounded-full bg-white/90 hover:bg-white active:scale-95 border-2 border-white/80 flex items-center justify-center text-[#007f6e] transition-all shadow-sm"
+            title="Usage Statistics"
+            aria-label="Usage Statistics"
+          >
+            <BarChart3 className="w-5 h-5 text-[#00a890]" />
+          </button>
+        )}
       </div>
     </header>
   );

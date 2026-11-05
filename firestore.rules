@@ -1,0 +1,141 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /skillquest_game_stats/{gameId}
+    // Document ID: gameId (string, e.g. 'aac-communicator', 'bubble-pop')
+    // Fields:
+    //   - gameId: string (required, 1-100 chars, immutable)
+    //   - title: string (optional, 0-100 chars)
+    //   - timesPlayed: number (optional, >= 0)
+    //   - totalDurationSeconds: number (optional, >= 0)
+    //   - lastPlayedAt: number or timestamp (optional)
+    //   - highScore: number (optional)
+    //   - completedSessions: number (optional, >= 0)
+    //   - updatedAt: number or timestamp (optional)
+    //
+    // Collection: /skillquest_sessions/{sessionId}
+    // Document ID: sessionId (string, e.g. '{gameId}_{timestamp}_{rand}')
+    // Fields:
+    //   - id: string (required, 1-128 chars, matches sessionId, immutable)
+    //   - gameId: string (required, 1-100 chars)
+    //   - durationSeconds: number (required, >= 0)
+    //   - startedAt: number or timestamp (required)
+    //   - endedAt: number or timestamp (required)
+    //   - score: number (optional)
+    //   - completed: bool (required)
+    //
+    // Collection: /skillquest_settings/{settingId}
+    // Document ID: settingId (string, e.g. 'auth')
+    // Fields:
+    //   - pin: string (required, 4-128 chars)
+    //   - updatedAt: number or timestamp (optional)
+    //
+    // ===============================================================
+
+
+
+    // ===============================================================
+    // Domain Validators (SkillQuest)
+    // ===============================================================
+
+    function isValidGameStat(gameId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+        'gameId', 'title', 'timesPlayed', 'totalDurationSeconds',
+        'lastPlayedAt', 'highScore', 'completedSessions', 'updatedAt'
+      ]) &&
+      ('gameId' in data && data.gameId is string && data.gameId.size() > 0 && data.gameId.size() <= 100 && data.gameId == gameId) &&
+      (!('title' in data) || (data.title is string && data.title.size() <= 100)) &&
+      (!('timesPlayed' in data) || (data.timesPlayed is number && data.timesPlayed >= 0)) &&
+      (!('totalDurationSeconds' in data) || (data.totalDurationSeconds is number && data.totalDurationSeconds >= 0)) &&
+      (!('lastPlayedAt' in data) || (data.lastPlayedAt is number || data.lastPlayedAt is timestamp)) &&
+      (!('highScore' in data) || data.highScore is number) &&
+      (!('completedSessions' in data) || (data.completedSessions is number && data.completedSessions >= 0)) &&
+      (!('updatedAt' in data) || (data.updatedAt is number || data.updatedAt is timestamp));
+    }
+
+    function isValidSession(sessionId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+        'id', 'gameId', 'durationSeconds', 'startedAt', 'endedAt', 'score', 'completed'
+      ]) &&
+      data.keys().hasAll([
+        'id', 'gameId', 'durationSeconds', 'startedAt', 'endedAt', 'completed'
+      ]) &&
+      (data.id is string && data.id == sessionId && data.id.size() > 0 && data.id.size() <= 128) &&
+      (data.gameId is string && data.gameId.size() > 0 && data.gameId.size() <= 100) &&
+      (data.durationSeconds is number && data.durationSeconds >= 0) &&
+      (data.startedAt is number || data.startedAt is timestamp) &&
+      (data.endedAt is number || data.endedAt is timestamp) &&
+      (data.completed is bool) &&
+      (!('score' in data) || data.score is number);
+    }
+
+    function isValidSettings() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['pin', 'updatedAt']) &&
+      ('pin' in data && data.pin is string && data.pin.size() >= 4 && data.pin.size() <= 128) &&
+      (!('updatedAt' in data) || (data.updatedAt is number || data.updatedAt is timestamp));
+    }
+
+    // ── BillDesk ──────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /debts/{debtId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        match /payments/{paymentId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+    }
+
+    // ── rbiloan-control ───────────────────────────────────────────────────────
+    match /projects/{projectId} {
+      allow read, write: if request.auth != null;
+
+      match /budgetItems/{itemId} {
+        allow read, write: if request.auth != null;
+      }
+
+      match /draws/{drawId} {
+        allow read, write: if request.auth != null;
+
+        match /items/{itemId} {
+          allow read, write: if request.auth != null;
+        }
+      }
+    }
+
+    // ── SkillQuest (RBT & Educational Gaming) ─────────────────────────────────
+    match /skillquest_game_stats/{gameId} {
+      allow read: if true;
+      allow create: if isValidGameStat(gameId);
+      allow update: if isValidGameStat(gameId) && request.resource.data.gameId == resource.data.gameId;
+      allow delete: if false;
+    }
+
+    match /skillquest_sessions/{sessionId} {
+      allow read: if true;
+      allow create: if isValidSession(sessionId);
+      allow update, delete: if false;
+    }
+
+    match /skillquest_settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isValidSettings();
+      allow delete: if false;
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
