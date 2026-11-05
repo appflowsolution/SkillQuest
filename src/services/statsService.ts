@@ -92,7 +92,10 @@ export async function getGameStats(): Promise<Record<string, GameUsageStat>> {
       remote[d.id] = d.data() as GameUsageStat;
     });
 
-    const merged = normalizeStatsMap({ ...local, ...remote });
+    // If remote is empty, Firestore has 0 documents (e.g. freshly reset). Do not resurrect from local.
+    const merged = snapshot.empty 
+      ? normalizeStatsMap({}) 
+      : normalizeStatsMap({ ...local, ...remote });
     setLocalCache(merged);
     return merged;
   } catch (err) {
@@ -114,6 +117,12 @@ export async function getSessionHistory(): Promise<SessionRecord[]> {
     snapshot.forEach((d) => {
       remote.push(d.data() as SessionRecord);
     });
+
+    // If remote has 0 sessions (e.g. after reset), do not resurrect from local cache
+    if (snapshot.empty) {
+      setLocalSessionsCache([]);
+      return [];
+    }
 
     const map = new Map<string, SessionRecord>();
     for (const s of local) map.set(s.id, s);
@@ -357,21 +366,29 @@ export function calculateOverview(stats: Record<string, GameUsageStat>): StatsOv
  * Reset all stats (local cache and remote Firestore docs).
  */
 export async function resetAllStats(): Promise<void> {
-  localStorage.removeItem(LOCAL_STORAGE_KEY);
-  localStorage.removeItem(SESSIONS_LOCAL_STORAGE_KEY);
   try {
     const statsCol = collection(db, STATS_COLLECTION);
     const statsSnap = await getDocs(statsCol);
-    const batch = writeBatch(db);
-    statsSnap.forEach((d) => batch.delete(d.ref));
+    if (!statsSnap.empty) {
+      const batch = writeBatch(db);
+      statsSnap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
 
     const sessionsCol = collection(db, SESSIONS_COLLECTION);
     const sessionsSnap = await getDocs(sessionsCol);
-    sessionsSnap.forEach((d) => batch.delete(d.ref));
-
-    await batch.commit();
+    if (!sessionsSnap.empty) {
+      const batch = writeBatch(db);
+      sessionsSnap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
   } catch (err) {
     console.warn('[StatsService] Remote reset failed:', err);
+  } finally {
+    setLocalCache(normalizeStatsMap({}));
+    setLocalSessionsCache([]);
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem(SESSIONS_LOCAL_STORAGE_KEY);
   }
 }
 

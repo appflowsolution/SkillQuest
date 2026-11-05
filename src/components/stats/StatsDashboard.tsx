@@ -20,6 +20,7 @@ import {
   getGameStats, 
   getSessionHistory,
   aggregateStatsByTimeframe,
+  normalizeStatsMap,
   exportStatsCSV, 
   exportStatsJSON, 
   resetAllStats, 
@@ -188,9 +189,15 @@ export const StatsDashboard = ({ onBack: _onBack }: StatsDashboardProps) => {
 
   const handleReset = async () => {
     soundEngine.playPairMiss();
-    await resetAllStats();
-    setIsResetConfirmOpen(false);
-    fetchAllData();
+    try {
+      await resetAllStats();
+      setStats(normalizeStatsMap({}));
+      setSessions([]);
+      setIsResetConfirmOpen(false);
+    } catch (err) {
+      console.error('[handleReset] Failed:', err);
+      setIsResetConfirmOpen(false);
+    }
   };
 
   const handleChangePin = async (e: React.FormEvent) => {

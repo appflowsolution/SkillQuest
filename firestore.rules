@@ -118,13 +118,14 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isValidGameStat(gameId);
       allow update: if isValidGameStat(gameId) && request.resource.data.gameId == resource.data.gameId;
-      allow delete: if false;
+      allow delete: if true;
     }
 
     match /skillquest_sessions/{sessionId} {
       allow read: if true;
       allow create: if isValidSession(sessionId);
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if true;
     }
 
     match /skillquest_settings/{settingId} {

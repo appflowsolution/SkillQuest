@@ -63,7 +63,7 @@ export function App() {
       if (activeGameIdRef.current && lastFlushTimeRef.current) {
         const now = Date.now();
         const deltaSeconds = (now - lastFlushTimeRef.current) / 1000;
-        if (deltaSeconds >= 2) {
+        if (deltaSeconds >= 1) {
           recordHeartbeat(activeGameIdRef.current, deltaSeconds);
           lastFlushTimeRef.current = now;
         }
@@ -76,10 +76,12 @@ export function App() {
       }
     };
 
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleFlushOnLeave);
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleFlushOnLeave);
     };
